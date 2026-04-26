@@ -1,0 +1,38 @@
+# --- Python & Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.python-version
+
+# --- Large Data Files (Protect your GitHub Quota) ---
+# We ignore the specific CSVs in your scripts folder
+backend/data/*.csv
+# Ignore any other data files you might add later
+*.csv
+*.sql
+*.sqlite
+
+# --- ML Models ---
+# Models are large binary files; usually better to store them 
+# on Cloud/Drive, but we'll ignore the whole folder here.
+backend/model/
+*.pkl
+
+# --- Frontend (React) ---
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+.eslintcache
+npm-debug.log*
+
+# --- IDEs and OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Notebooks ---
+# This ignores the hidden checkpoints Jupyter creates
+.ipynb_checkpoints/
