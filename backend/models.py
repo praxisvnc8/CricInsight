@@ -1,0 +1,87 @@
+"""
+models.py – SQLAlchemy 2.0 ORM models for the matches and deliveries tables
+in the ipl_dashboard database.
+"""
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Date,
+    Float,
+    CHAR,
+    ForeignKey,
+)
+from sqlalchemy.orm import relationship
+
+from database import Base
+
+
+class Match(Base):
+    """ORM model for the `matches` table."""
+
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    season = Column(Integer, nullable=False)
+    city = Column(String(100))
+    date = Column(Date, nullable=False)
+    match_type = Column(String(50))
+    player_of_match = Column(String(100))
+    venue = Column(String(150))
+    team1 = Column(String(100), nullable=False)
+    team2 = Column(String(100), nullable=False)
+    toss_winner = Column(String(100))
+    toss_decision = Column(String(10))
+    winner = Column(String(100))
+    result = Column(String(50))
+    result_margin = Column(Float)
+    target_runs = Column(Float)
+    target_overs = Column(Float)
+    super_over = Column(CHAR(1))
+    method = Column(String(20))
+    umpire1 = Column(String(100))
+    umpire2 = Column(String(100))
+
+    # one-to-many: a match has many deliveries
+    deliveries = relationship("Delivery", back_populates="match", lazy="select")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Match(id={self.id}, season={self.season}, "
+            f"team1='{self.team1}', team2='{self.team2}')>"
+        )
+
+
+class Delivery(Base):
+    """ORM model for the `deliveries` table."""
+
+    __tablename__ = "deliveries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
+    inning = Column(Integer)
+    batting_team = Column(String(100))
+    bowling_team = Column(String(100))
+    over = Column(Integer)
+    ball = Column(Integer)
+    batter = Column(String(100))
+    bowler = Column(String(100))
+    non_striker = Column(String(100))
+    batsman_runs = Column(Integer)
+    extra_runs = Column(Integer)
+    total_runs = Column(Integer)
+    extras_type = Column(String(50))
+    is_wicket = Column(Integer)
+    player_dismissed = Column(String(100))
+    dismissal_kind = Column(String(50))
+    fielder = Column(String(100))
+
+    # many-to-one: each delivery belongs to a match
+    match = relationship("Match", back_populates="deliveries", lazy="select")
+
+    def __repr__(self) -> str:
+        return (
+            f"<Delivery(id={self.id}, match_id={self.match_id}, "
+            f"over={self.over}, ball={self.ball})>"
+        )
