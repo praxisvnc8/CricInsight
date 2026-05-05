@@ -50,12 +50,12 @@ def root():
 
 
 @app.get("/api/matches", response_model=list[MatchResponse])
-def list_matches(limit: int = 50, db: Session = Depends(get_db)):
-    """Return the most recent matches (default limit: 50)."""
+def list_matches(db: Session = Depends(get_db)):
+    """Return all the matches from the db"""
     matches = (
         db.query(Match)
         .order_by(Match.date.desc())
-        .limit(limit)
+        # .limit(limit)
         .all()
     )
     return matches
