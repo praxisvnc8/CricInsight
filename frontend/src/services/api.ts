@@ -54,4 +54,24 @@ export async function fetchPlayerStats(playerName: string) {
   }
 }
 
+export async function predictInningsScore(data: any) {
+  try {
+    const response = await api.post("/predict/innings-score", data);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to predict innings score:", error);
+    throw error;
+  }
+}
+
+export async function predictPlayerPerformance(data: any) {
+  try {
+    const response = await api.post("/predict/player-performance", data);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to predict player performance:", error);
+    throw error;
+  }
+}
+
 export default api;
