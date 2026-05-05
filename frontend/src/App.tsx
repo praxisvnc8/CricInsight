@@ -3,6 +3,7 @@ import OverviewDashboard from "./components/OverviewDashboard";
 import "./App.css";
 import TeamAnalysis from "./components/TeamAnalysis";
 import PlayerAnalysis from "./components/PlayerAnalysis";
+import Predictions from "./components/Predictions";
 
 // /* ── Inline placeholder pages ───────────────────────────────────────────── */
 // function TeamsPlaceholder() {
@@ -25,15 +26,15 @@ import PlayerAnalysis from "./components/PlayerAnalysis";
 //   );
 // }
 
-function PredictPlaceholder() {
-  return (
-    <div className="placeholder-page">
-      <span className="placeholder-icon">🤖</span>
-      <h2>Predictions</h2>
-      <p>Coming Soon</p>
-    </div>
-  );
-}
+// function PredictPlaceholder() {
+//   return (
+//     <div className="placeholder-page">
+//       <span className="placeholder-icon">🤖</span>
+//       <h2>Predictions</h2>
+//       <p>Coming Soon</p>
+//     </div>
+//   );
+// }
 
 /* ── Nav items ──────────────────────────────────────────────────────────── */
 const navItems = [
@@ -81,7 +82,7 @@ export default function App() {
           <Route path="/" element={<OverviewDashboard />} />
           <Route path="/teams" element={<TeamAnalysis />} />
           <Route path="/players" element={<PlayerAnalysis/>} />
-          <Route path="/predict" element={<PredictPlaceholder />} />
+          <Route path="/predict" element={<Predictions />} />
         </Routes>
       </main>
     </div>
