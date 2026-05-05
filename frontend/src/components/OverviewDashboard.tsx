@@ -194,7 +194,7 @@ export default function OverviewDashboard() {
           enabled: true,
           easing: "easeinout",
           speed: 800,
-        },
+        }as any,
       },
       theme: { mode: "dark" },
       plotOptions: {
