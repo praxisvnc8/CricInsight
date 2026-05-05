@@ -1,17 +1,18 @@
 import { NavLink, Routes, Route } from "react-router-dom";
 import OverviewDashboard from "./components/OverviewDashboard";
 import "./App.css";
+import TeamAnalysis from "./components/TeamAnalysis";
 
-/* ── Inline placeholder pages ───────────────────────────────────────────── */
-function TeamsPlaceholder() {
-  return (
-    <div className="placeholder-page">
-      <span className="placeholder-icon">🏟️</span>
-      <h2>Team Analysis</h2>
-      <p>Coming Soon</p>
-    </div>
-  );
-}
+// /* ── Inline placeholder pages ───────────────────────────────────────────── */
+// function TeamsPlaceholder() {
+//   return (
+//     <div className="placeholder-page">
+//       <span className="placeholder-icon">🏟️</span>
+//       <h2>Team Analysis</h2>
+//       <p>Coming Soon</p>
+//     </div>
+//   );
+// }
 
 function PlayersPlaceholder() {
   return (
@@ -77,7 +78,7 @@ export default function App() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<OverviewDashboard />} />
-          <Route path="/teams" element={<TeamsPlaceholder />} />
+          <Route path="/teams" element={<TeamAnalysis />} />
           <Route path="/players" element={<PlayersPlaceholder />} />
           <Route path="/predict" element={<PredictPlaceholder />} />
         </Routes>
