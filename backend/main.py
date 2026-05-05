@@ -16,8 +16,12 @@ from schemas import (
     MatchResponse,
     MatchWinnerRequest,
     MatchWinnerResponse,
+    InningsScoreRequest,
+    InningsScoreResponse,
+    PlayerPerformanceRequest,
+    PlayerPerformanceResponse,
 )
-from ml_services import predict_match_winner
+from ml_services import predict_match_winner, predict_innings_score, evaluate_player_performance
 
 # ── FastAPI app ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -181,3 +185,43 @@ def player_stats(player_name: str, db: Session = Depends(get_db)):
         "total_runs_conceded": int(row.total_runs_conceded or 0),
         "total_balls_bowled": int(row.total_balls_bowled or 0),
     }
+
+
+@app.post("/api/predict/innings-score", response_model=InningsScoreResponse)
+def predict_score(payload: InningsScoreRequest):
+    """Predict the first-innings total for the batting team."""
+    try:
+        result = predict_innings_score(
+            batting_team=payload.batting_team,
+            bowling_team=payload.bowling_team,
+            city=payload.city,
+            season=payload.season,
+            toss_winner=payload.toss_winner,
+            toss_decision=payload.toss_decision,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=f"Prediction error: {exc}")
+
+    return result
+
+
+@app.post("/api/predict/player-performance", response_model=PlayerPerformanceResponse)
+def predict_player(payload: PlayerPerformanceRequest):
+    """Classify a player's seasonal performance as Good / Average / Poor."""
+    try:
+        result = evaluate_player_performance(
+            innings=payload.innings,
+            balls_faced=payload.balls_faced,
+            strike_rate=payload.strike_rate,
+            batting_avg=payload.batting_avg,
+            fours=payload.fours,
+            sixes=payload.sixes,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=f"Prediction error: {exc}")
+
+    return result
