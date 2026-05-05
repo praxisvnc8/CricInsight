@@ -1,11 +1,13 @@
 """
-models.py – SQLAlchemy 2.0 ORM models for the matches and deliveries tables
-in the ipl_dashboard database.
+models.py – SQLAlchemy 2.0 ORM models for the matches and deliveries tables,
+and read-only mappings for the SQL views in the ipl_dashboard database.
 """
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Integer,
+    Numeric,
     String,
     Date,
     Float,
@@ -85,3 +87,75 @@ class Delivery(Base):
             f"<Delivery(id={self.id}, match_id={self.match_id}, "
             f"over={self.over}, ball={self.ball})>"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  READ-ONLY VIEW MODELS
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class BatsmanSeasonStat(Base):
+    """ORM mapping for the `batsman_season_stats` SQL view."""
+
+    __tablename__ = "batsman_season_stats"
+    __table_args__ = {"info": {"is_view": True}}
+
+    batter = Column(String(100), primary_key=True)
+    season = Column(Integer, primary_key=True)
+    innings = Column(Integer)
+    total_runs = Column(Integer)
+    balls_faced = Column(Integer)
+    fours = Column(Integer)
+    sixes = Column(Integer)
+    strike_rate = Column(Numeric(10, 2))
+    batting_avg = Column(Numeric(10, 2))
+
+    def __repr__(self) -> str:
+        return f"<BatsmanSeasonStat(batter='{self.batter}', season={self.season})>"
+
+
+class BowlerSeasonStat(Base):
+    """ORM mapping for the `bowler_season_stats` SQL view."""
+
+    __tablename__ = "bowler_season_stats"
+    __table_args__ = {"info": {"is_view": True}}
+
+    bowler = Column(String(100), primary_key=True)
+    season = Column(Integer, primary_key=True)
+    matches_played = Column(Integer)
+    wickets = Column(Integer)
+    runs_conceded = Column(Integer)
+    balls_bowled = Column(Integer)
+    economy = Column(Numeric(10, 2))
+    bowling_avg = Column(Numeric(10, 2))
+
+    def __repr__(self) -> str:
+        return f"<BowlerSeasonStat(bowler='{self.bowler}', season={self.season})>"
+
+
+class PlayerSeasonStat(Base):
+    """ORM mapping for the `player_season_stats` SQL view."""
+
+    __tablename__ = "player_season_stats"
+    __table_args__ = {"info": {"is_view": True}}
+
+    player = Column(String(100), primary_key=True)
+    season = Column(Integer, primary_key=True)
+    innings = Column(Integer)
+    total_runs = Column(Integer)
+    balls_faced = Column(Integer)
+    fours = Column(Integer)
+    sixes = Column(Integer)
+    strike_rate = Column(Numeric(10, 2))
+    batting_avg = Column(Numeric(10, 2))
+    matches_played = Column(Integer)
+    wickets = Column(Integer)
+    runs_conceded = Column(Integer)
+    balls_bowled = Column(Integer)
+    economy = Column(Numeric(10, 2))
+    bowling_avg = Column(Numeric(10, 2))
+    is_allrounder = Column(Boolean)
+
+    def __repr__(self) -> str:
+        return f"<PlayerSeasonStat(player='{self.player}', season={self.season})>"
+
