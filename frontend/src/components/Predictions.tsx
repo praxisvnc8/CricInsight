@@ -418,7 +418,7 @@ export default function Predictions() {
       .finally(() => sc_setLoading(false));
   };
 
-  const handlePlayer = async () => {
+ const handlePlayer = async () => {
     const name = pl_name.trim();
     if (!name) return;
     pl_setLoading(true);
@@ -428,10 +428,9 @@ export default function Predictions() {
     try {
       const stats = await fetchPlayerStats(name);
 
+      // --- Batting Derivations ---
       const innings = stats.total_innings ?? 0;
       const balls_faced = stats.total_balls_faced ?? 0;
-      const fours = stats.total_fours ?? 0;
-      const sixes = stats.total_sixes ?? 0;
       const strike_rate =
         balls_faced > 0
           ? parseFloat(((stats.total_runs / balls_faced) * 100).toFixed(2))
@@ -441,14 +440,31 @@ export default function Predictions() {
           ? parseFloat((stats.total_runs / innings).toFixed(2))
           : 0;
 
+      // --- Bowling Derivations ---
+      const wickets = stats.total_wickets ?? 0;
+      const runs_conceded = stats.total_runs_conceded ?? 0;
+      const balls_bowled = stats.total_balls_bowled ?? 0;
+      
+      const economy =
+        balls_bowled > 0
+          ? parseFloat(((runs_conceded / balls_bowled) * 6).toFixed(2))
+          : 0;
+          
+      const bowling_avg =
+        wickets > 0
+          ? parseFloat((runs_conceded / wickets).toFixed(2))
+          : 0;
+
+      // Call the ML API with the calculated 6 features
       const perf: PerfResult = await predictPlayerPerformance({
-        innings,
-        balls_faced,
-        strike_rate,
-        batting_avg,
-        fours,
-        sixes,
+        total_runs: stats.total_runs ?? 0,
+        strike_rate: strike_rate,
+        batting_avg: batting_avg,
+        wickets: wickets,
+        economy: economy,
+        bowling_avg: bowling_avg,
       });
+      
       pl_setResult(perf);
     } catch (err: any) {
       if (err?.response?.status === 404) {
@@ -462,7 +478,6 @@ export default function Predictions() {
       pl_setLoading(false);
     }
   };
-
   /* ── Render helpers ───────────────────────────────────────────────────── */
   const renderSelect = (
     label: string,

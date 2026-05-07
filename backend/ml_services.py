@@ -178,27 +178,29 @@ def predict_innings_score(
 
 
 def evaluate_player_performance(
-    innings: int,
-    balls_faced: int,
+    total_runs: int,
     strike_rate: float,
     batting_avg: float,
-    fours: int,
-    sixes: int,
+    wickets: int,
+    economy: float,
+    bowling_avg: float,
 ) -> dict[str, Any]:
     """Classify a player's seasonal performance as Good / Average / Poor.
 
     Parameters
     ----------
-    innings : int
-        Number of innings played.
-    balls_faced : int
-        Total balls faced in the season.
+    total_runs : int
+        Total runs scored in the season/career.
     strike_rate : float
         Batting strike rate.
     batting_avg : float
         Batting average (runs per innings).
-    fours, sixes : int
-        Boundary counts.
+    wickets : int
+        Total wickets taken.
+    economy : float
+        Bowling economy rate (runs conceded per over).
+    bowling_avg : float
+        Bowling average (runs conceded per wicket).
 
     Returns
     -------
@@ -209,8 +211,9 @@ def evaluate_player_performance(
     features = bundle["features"]
     thresholds = bundle["thresholds"]
 
+    # Must match the exact order of features used during training
     X = pd.DataFrame(
-        [[innings, balls_faced, strike_rate, batting_avg, fours, sixes]],
+        [[total_runs, strike_rate, batting_avg, wickets, economy, bowling_avg]],
         columns=features,
     )
 
@@ -223,16 +226,14 @@ def evaluate_player_performance(
             "good_above": thresholds["q67"],
         },
         "input_stats": {
-            "innings": innings,
-            "balls_faced": balls_faced,
+            "total_runs": total_runs,
             "strike_rate": strike_rate,
             "batting_avg": batting_avg,
-            "fours": fours,
-            "sixes": sixes,
+            "wickets": wickets,
+            "economy": economy,
+            "bowling_avg": bowling_avg,
         },
     }
-
-
 # ── Convenience helpers for route-layer validation ──────────────────────────
 
 def get_valid_teams() -> list[str]:

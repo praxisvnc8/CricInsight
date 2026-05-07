@@ -206,18 +206,18 @@ def predict_score(payload: InningsScoreRequest):
 
     return result
 
-
 @app.post("/api/predict/player-performance", response_model=PlayerPerformanceResponse)
 def predict_player(payload: PlayerPerformanceRequest):
     """Classify a player's seasonal performance as Good / Average / Poor."""
     try:
+        # Pass the NEW features to the ML service
         result = evaluate_player_performance(
-            innings=payload.innings,
-            balls_faced=payload.balls_faced,
+            total_runs=payload.total_runs,
             strike_rate=payload.strike_rate,
             batting_avg=payload.batting_avg,
-            fours=payload.fours,
-            sixes=payload.sixes,
+            wickets=payload.wickets,
+            economy=payload.economy,
+            bowling_avg=payload.bowling_avg,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=503, detail=str(exc))

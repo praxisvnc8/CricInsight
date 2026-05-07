@@ -154,16 +154,14 @@ class InningsScoreResponse(BaseModel):
 
 
 class PlayerPerformanceRequest(BaseModel):
-    """Input schema for ``evaluate_player_performance()``."""
-
-    innings: int = Field(..., ge=1, examples=[14])
-    balls_faced: int = Field(..., ge=1, examples=[390])
-    strike_rate: float = Field(..., ge=0.0, examples=[135.5])
-    batting_avg: float = Field(..., ge=0.0, examples=[42.8])
-    fours: int = Field(..., ge=0, examples=[38])
-    sixes: int = Field(..., ge=0, examples=[12])
-
-
+    """Input schema for evaluate_player_performance()."""
+    total_runs: int = Field(..., examples=[450])
+    strike_rate: float = Field(..., examples=[135.5])
+    batting_avg: float = Field(..., examples=[42.8])
+    wickets: int = Field(..., examples=[15])
+    economy: float = Field(..., examples=[7.5])
+    bowling_avg: float = Field(..., examples=[24.2])
+    
 class PlayerPerformanceResponse(BaseModel):
     """Output schema for the player-performance evaluation."""
 
