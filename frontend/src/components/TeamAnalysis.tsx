@@ -1,33 +1,52 @@
 import { useEffect, useMemo, useState } from "react";
 import Chart from "react-apexcharts";
-import { fetchMatches } from "../services/api";
+import { fetchMatches, fetchHeadToHeadStats } from "../services/api";
 import { getTeamLogo } from "../utils/teamLogos";
 import type { ApexOptions } from "apexcharts";
 
 interface Match {
-  id:number;season:number;city:string|null;date:string;match_type:string|null;
-  player_of_match:string|null;venue:string|null;team1:string;team2:string;
-  toss_winner:string|null;toss_decision:string|null;winner:string|null;
-  result:string|null;result_margin:number|null;target_runs:number|null;
-  target_overs:number|null;super_over:string|null;method:string|null;
-  umpire1:string|null;umpire2:string|null;
+  id: number; season: number; city: string | null; date: string; match_type: string | null;
+  player_of_match: string | null; venue: string | null; team1: string; team2: string;
+  toss_winner: string | null; toss_decision: string | null; winner: string | null;
+  result: string | null; result_margin: number | null; target_runs: number | null;
+  target_overs: number | null; super_over: string | null; method: string | null;
+  umpire1: string | null; umpire2: string | null;
+}
+
+interface H2HTeamStats {
+  name: string;
+  won: number;
+  highest_total: number;
+  lowest_total: number;
+  tosses_won: number;
+  elected_bat: number;
+  elected_field: number;
+  toss_and_match_won: number;
+  avg_runs: number;
+  avg_wickets: number;
+}
+
+interface H2HData {
+  played: number;
+  team1: H2HTeamStats;
+  team2: H2HTeamStats;
 }
 
 interface FranchiseInfo {
-  name:string;captain:string;coach:string;owner:string;homeVenue:string;keyPlayers:string[];
+  name: string; captain: string; coach: string; owner: string; homeVenue: string; keyPlayers: string[];
 }
 
 const FRANCHISE_DETAILS: FranchiseInfo[] = [
-  {name:"Chennai Super Kings",captain:"Ruturaj Gaikwad",coach:"Stephen Fleming",owner:"Chennai Super Kings Cricket Ltd.",homeVenue:"MA Chidambaram Stadium, Chennai",keyPlayers:["Ruturaj Gaikwad","Ravindra Jadeja","Matheesha Pathirana","Shivam Dube","Devon Conway"]},
-  {name:"Delhi Capitals",captain:"KL Rahul",coach:"Ricky Ponting",owner:"GMR Group & JSW Group",homeVenue:"Arun Jaitley Stadium, Delhi",keyPlayers:["KL Rahul","Jake Fraser-McGurk","Kuldeep Yadav","Mitchell Starc","Tristan Stubbs"]},
-  {name:"Gujarat Titans",captain:"Shubman Gill",coach:"Ashish Nehra",owner:"CVC Capital Partners",homeVenue:"Narendra Modi Stadium, Ahmedabad",keyPlayers:["Shubman Gill","Rashid Khan","Sai Sudharsan","Mohammed Siraj","Jos Buttler"]},
-  {name:"Kolkata Knight Riders",captain:"Ajinkya Rahane",coach:"Chandrakant Pandit",owner:"Red Chillies Entertainment",homeVenue:"Eden Gardens, Kolkata",keyPlayers:["Sunil Narine","Andre Russell","Rinku Singh","Varun Chakaravarthy","Venkatesh Iyer"]},
-  {name:"Lucknow Super Giants",captain:"Rishabh Pant",coach:"Justin Langer",owner:"RPSG Group",homeVenue:"Ekana Cricket Stadium, Lucknow",keyPlayers:["Rishabh Pant","Nicholas Pooran","Ravi Bishnoi","Avesh Khan","Quinton de Kock"]},
-  {name:"Mumbai Indians",captain:"Hardik Pandya",coach:"Mark Boucher",owner:"Reliance Industries",homeVenue:"Wankhede Stadium, Mumbai",keyPlayers:["Jasprit Bumrah","Rohit Sharma","Suryakumar Yadav","Tilak Varma","Tim David"]},
-  {name:"Punjab Kings",captain:"Shreyas Iyer",coach:"Trevor Bayliss",owner:"Mohit Burman & Preity Zinta",homeVenue:"PCA Stadium, Mohali",keyPlayers:["Shreyas Iyer","Kagiso Rabada","Arshdeep Singh","Marcus Stoinis","Prabhsimran Singh"]},
-  {name:"Rajasthan Royals",captain:"Sanju Samson",coach:"Kumar Sangakkara",owner:"Emerging Media",homeVenue:"Sawai Mansingh Stadium, Jaipur",keyPlayers:["Sanju Samson","Yashasvi Jaiswal","Trent Boult","Shimron Hetmyer","Yuzvendra Chahal"]},
-  {name:"Royal Challengers Bengaluru",captain:"Rajat Patidar",coach:"Andy Flower",owner:"United Spirits",homeVenue:"M. Chinnaswamy Stadium, Bengaluru",keyPlayers:["Virat Kohli","Rajat Patidar","Glenn Maxwell","Yash Dayal","Cameron Green"]},
-  {name:"Sunrisers Hyderabad",captain:"Pat Cummins",coach:"Daniel Vettori",owner:"Sun TV Network",homeVenue:"Rajiv Gandhi Intl Stadium, Hyderabad",keyPlayers:["Travis Head","Heinrich Klaasen","Pat Cummins","Abhishek Sharma","Bhuvneshwar Kumar"]},
+  { name: "Chennai Super Kings", captain: "Ruturaj Gaikwad", coach: "Stephen Fleming", owner: "Chennai Super Kings Cricket Ltd.", homeVenue: "MA Chidambaram Stadium, Chennai", keyPlayers: ["Ruturaj Gaikwad", "Ravindra Jadeja", "Matheesha Pathirana", "Shivam Dube", "Devon Conway"] },
+  { name: "Delhi Capitals", captain: "KL Rahul", coach: "Ricky Ponting", owner: "GMR Group & JSW Group", homeVenue: "Arun Jaitley Stadium, Delhi", keyPlayers: ["KL Rahul", "Jake Fraser-McGurk", "Kuldeep Yadav", "Mitchell Starc", "Tristan Stubbs"] },
+  { name: "Gujarat Titans", captain: "Shubman Gill", coach: "Ashish Nehra", owner: "CVC Capital Partners", homeVenue: "Narendra Modi Stadium, Ahmedabad", keyPlayers: ["Shubman Gill", "Rashid Khan", "Sai Sudharsan", "Mohammed Siraj", "Jos Buttler"] },
+  { name: "Kolkata Knight Riders", captain: "Ajinkya Rahane", coach: "Chandrakant Pandit", owner: "Red Chillies Entertainment", homeVenue: "Eden Gardens, Kolkata", keyPlayers: ["Sunil Narine", "Andre Russell", "Rinku Singh", "Varun Chakaravarthy", "Venkatesh Iyer"] },
+  { name: "Lucknow Super Giants", captain: "Rishabh Pant", coach: "Justin Langer", owner: "RPSG Group", homeVenue: "Ekana Cricket Stadium, Lucknow", keyPlayers: ["Rishabh Pant", "Nicholas Pooran", "Ravi Bishnoi", "Avesh Khan", "Quinton de Kock"] },
+  { name: "Mumbai Indians", captain: "Hardik Pandya", coach: "Mark Boucher", owner: "Reliance Industries", homeVenue: "Wankhede Stadium, Mumbai", keyPlayers: ["Jasprit Bumrah", "Rohit Sharma", "Suryakumar Yadav", "Tilak Varma", "Tim David"] },
+  { name: "Punjab Kings", captain: "Shreyas Iyer", coach: "Trevor Bayliss", owner: "Mohit Burman & Preity Zinta", homeVenue: "PCA Stadium, Mohali", keyPlayers: ["Shreyas Iyer", "Kagiso Rabada", "Arshdeep Singh", "Marcus Stoinis", "Prabhsimran Singh"] },
+  { name: "Rajasthan Royals", captain: "Sanju Samson", coach: "Kumar Sangakkara", owner: "Emerging Media", homeVenue: "Sawai Mansingh Stadium, Jaipur", keyPlayers: ["Sanju Samson", "Yashasvi Jaiswal", "Trent Boult", "Shimron Hetmyer", "Yuzvendra Chahal"] },
+  { name: "Royal Challengers Bengaluru", captain: "Rajat Patidar", coach: "Andy Flower", owner: "United Spirits", homeVenue: "M. Chinnaswamy Stadium, Bengaluru", keyPlayers: ["Virat Kohli", "Rajat Patidar", "Glenn Maxwell", "Yash Dayal", "Cameron Green"] },
+  { name: "Sunrisers Hyderabad", captain: "Pat Cummins", coach: "Daniel Vettori", owner: "Sun TV Network", homeVenue: "Rajiv Gandhi Intl Stadium, Hyderabad", keyPlayers: ["Travis Head", "Heinrich Klaasen", "Pat Cummins", "Abhishek Sharma", "Bhuvneshwar Kumar"] },
 ];
 
 const css = `
@@ -74,6 +93,20 @@ const css = `
 /* Chart */
 .ta-chart-wrap{max-width:480px;margin:0 auto}
 
+/* H2H Stat Comparison Board */
+.ta-h2h-board{margin-top:2rem;padding:1.5rem;background:rgba(255,255,255,.025);backdrop-filter:blur(14px);border-radius:16px;border:1px solid rgba(255,255,255,.06)}
+.ta-h2h-board-title{text-align:center;font-size:.8rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:2px;margin-bottom:1.25rem}
+.ta-h2h-stat-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:.7rem .5rem;border-radius:10px;transition:background .2s}
+.ta-h2h-stat-row:hover{background:rgba(255,255,255,.025)}
+.ta-h2h-stat-row+.ta-h2h-stat-row{border-top:1px solid rgba(255,255,255,.03)}
+.ta-h2h-val-l{text-align:right;font-size:1.05rem;font-weight:700;padding-right:1rem;font-variant-numeric:tabular-nums;transition:color .3s,text-shadow .3s}
+.ta-h2h-val-r{text-align:left;font-size:1.05rem;font-weight:700;padding-left:1rem;font-variant-numeric:tabular-nums;transition:color .3s,text-shadow .3s}
+.ta-h2h-val--bright-blue{color:#00c6ff;text-shadow:0 0 14px rgba(0,198,255,.35)}
+.ta-h2h-val--bright-amber{color:#f59e0b;text-shadow:0 0 14px rgba(245,158,11,.35)}
+.ta-h2h-val--dim{color:#3e4a5b}
+.ta-h2h-label{text-align:center;font-size:.7rem;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:1.2px;min-width:130px}
+.ta-h2h-loading{text-align:center;padding:2rem;color:#475569;font-size:.85rem}
+
 /* Divider */
 .ta-divider{max-width:1100px;margin:0 auto 2.5rem;border:none;border-top:1px solid rgba(255,255,255,.05)}
 
@@ -109,62 +142,85 @@ const css = `
 `;
 
 export default function TeamAnalysis() {
-  const [matches,setMatches]=useState<Match[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState<string|null>(null);
-  const [primary,setPrimary]=useState("");
-  const [opponent,setOpponent]=useState("");
-  const [selectedFran,setSelectedFran]=useState<string|null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [primary, setPrimary] = useState("");
+  const [opponent, setOpponent] = useState("");
+  const [selectedFran, setSelectedFran] = useState<string | null>(null);
+  const [h2hStats, setH2hStats] = useState<H2HData | null>(null);
+  const [h2hLoading, setH2hLoading] = useState(false);
 
-  const load=()=>{setLoading(true);setError(null);
-    fetchMatches().then((d:Match[])=>setMatches(d)).catch(()=>setError("Could not load match data.")).finally(()=>setLoading(false));};
-  useEffect(()=>{load();},[]);
+  const load = () => {
+    setLoading(true); setError(null);
+    fetchMatches().then((d: Match[]) => setMatches(d)).catch(() => setError("Could not load match data.")).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
 
-  const teams=useMemo(()=>{const s=new Set<string>();matches.forEach(m=>{s.add(m.team1);s.add(m.team2)});return Array.from(s).sort();},[matches]);
-  useEffect(()=>{if(teams.length>=2&&!primary){setPrimary(teams[0]);setOpponent(teams[1]);}},[teams,primary]);
+  const teams = useMemo(() => { const s = new Set<string>(); matches.forEach(m => { s.add(m.team1); s.add(m.team2) }); return Array.from(s).sort(); }, [matches]);
+  useEffect(() => { if (teams.length >= 2 && !primary) { setPrimary(teams[0]); setOpponent(teams[1]); } }, [teams, primary]);
 
-  const teamKpis=useMemo(()=>{
-    if(!primary)return null;
-    const tm=matches.filter(m=>m.team1===primary||m.team2===primary);
-    const total=tm.length; const wins=tm.filter(m=>m.winner===primary).length;
-    const pct=total>0?((wins/total)*100).toFixed(1):"0.0";
-    const tw=tm.filter(m=>m.toss_winner===primary).length;
-    const tww=tm.filter(m=>m.toss_winner===primary&&m.winner===primary).length;
-    const tc=tw>0?((tww/tw)*100).toFixed(1):"0.0";
-    return{total,wins,pct,tc};
-  },[matches,primary]);
+  useEffect(() => {
+    if (!primary || !opponent || primary === opponent) { setH2hStats(null); return; }
+    let cancelled = false;
+    setH2hLoading(true);
+    fetchHeadToHeadStats(primary, opponent)
+      .then(data => { if (!cancelled) setH2hStats(data); })
+      .catch(() => { if (!cancelled) setH2hStats(null); })
+      .finally(() => { if (!cancelled) setH2hLoading(false); });
+    return () => { cancelled = true; };
+  }, [primary, opponent]);
 
-  const h2h=useMemo(()=>{
-    if(!primary||!opponent||primary===opponent)return null;
-    const hm=matches.filter(m=>(m.team1===primary&&m.team2===opponent)||(m.team1===opponent&&m.team2===primary));
-    const t=hm.length;const pw=hm.filter(m=>m.winner===primary).length;
-    const ow=hm.filter(m=>m.winner===opponent).length;const nr=t-pw-ow;
-    return{total:t,primaryWins:pw,opponentWins:ow,noResult:nr};
-  },[matches,primary,opponent]);
+  const teamKpis = useMemo(() => {
+    if (!primary) return null;
+    const tm = matches.filter(m => m.team1 === primary || m.team2 === primary);
+    const total = tm.length; const wins = tm.filter(m => m.winner === primary).length;
+    const pct = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
+    const tw = tm.filter(m => m.toss_winner === primary).length;
+    const tww = tm.filter(m => m.toss_winner === primary && m.winner === primary).length;
+    const tc = tw > 0 ? ((tww / tw) * 100).toFixed(1) : "0.0";
+    return { total, wins, pct, tc };
+  }, [matches, primary]);
 
-  const donut=useMemo(()=>{
-    if(!h2h||h2h.total===0)return null;
-    const labels=[primary,opponent];const series=[h2h.primaryWins,h2h.opponentWins];
-    if(h2h.noResult>0){labels.push("No Result");series.push(h2h.noResult);}
-    const options:ApexOptions={
-      chart:{type:"donut",background:"transparent"},theme:{mode:"dark"},labels,
-      colors:["#00c6ff","#f59e0b","#334155"],stroke:{width:3,colors:["#0a0f1e"]},
-      legend:{position:"bottom",labels:{colors:"#94a3b8"},fontSize:"12px"},
-      dataLabels:{enabled:true,style:{fontSize:"14px",fontWeight:700},dropShadow:{enabled:false}},
-      plotOptions:{pie:{donut:{size:"62%",labels:{show:true,name:{fontSize:"13px",color:"#cbd5e1"},
-        value:{fontSize:"24px",fontWeight:800,color:"#e2e8f0"},
-        total:{show:true,label:"Total",fontSize:"12px",color:"#475569"}}}}},
-      tooltip:{theme:"dark"},
+  const h2h = useMemo(() => {
+    if (!primary || !opponent || primary === opponent) return null;
+    const hm = matches.filter(m => (m.team1 === primary && m.team2 === opponent) || (m.team1 === opponent && m.team2 === primary));
+    const t = hm.length; const pw = hm.filter(m => m.winner === primary).length;
+    const ow = hm.filter(m => m.winner === opponent).length; const nr = t - pw - ow;
+    return { total: t, primaryWins: pw, opponentWins: ow, noResult: nr };
+  }, [matches, primary, opponent]);
+
+  const donut = useMemo(() => {
+    if (!h2h || h2h.total === 0) return null;
+    const labels = [primary, opponent]; const series = [h2h.primaryWins, h2h.opponentWins];
+    if (h2h.noResult > 0) { labels.push("No Result"); series.push(h2h.noResult); }
+    const options: ApexOptions = {
+      chart: { type: "donut", background: "transparent" }, theme: { mode: "dark" }, labels,
+      colors: ["#00c6ff", "#f59e0b", "#334155"], stroke: { width: 3, colors: ["#0a0f1e"] },
+      legend: { position: "bottom", labels: { colors: "#94a3b8" }, fontSize: "12px" },
+      dataLabels: { enabled: true, style: { fontSize: "14px", fontWeight: 700 }, dropShadow: { enabled: false } },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "62%", labels: {
+              show: true, name: { fontSize: "13px", color: "#cbd5e1" },
+              value: { fontSize: "24px", fontWeight: 800, color: "#e2e8f0" },
+              total: { show: true, label: "Total", fontSize: "12px", color: "#475569" }
+            }
+          }
+        }
+      },
+      tooltip: { theme: "dark" },
     };
-    return{options,series};
-  },[h2h,primary,opponent]);
+    return { options, series };
+  }, [h2h, primary, opponent]);
 
-  const activeFran=FRANCHISE_DETAILS.find(f=>f.name===selectedFran)||null;
+  const activeFran = FRANCHISE_DETAILS.find(f => f.name === selectedFran) || null;
 
-  if(loading)return(<><style>{css}</style><div className="ta-wrap ta-center"><span style={{opacity:.7}}>⏳ Loading…</span></div></>);
-  if(error)return(<><style>{css}</style><div className="ta-wrap ta-error-box"><span style={{color:"#f87171"}}>❌ {error}</span><button className="ta-retry" onClick={load}>Retry</button></div></>);
+  if (loading) return (<><style>{css}</style><div className="ta-wrap ta-center"><span style={{ opacity: .7 }}>⏳ Loading…</span></div></>);
+  if (error) return (<><style>{css}</style><div className="ta-wrap ta-error-box"><span style={{ color: "#f87171" }}>❌ {error}</span><button className="ta-retry" onClick={load}>Retry</button></div></>);
 
-  return(<>
+  return (<>
     <style>{css}</style>
     <div className="ta-wrap">
       <h1 className="ta-head">Team Analysis</h1>
@@ -175,28 +231,28 @@ export default function TeamAnalysis() {
         <div className="ta-sel-group">
           <label className="ta-sel-lbl">Primary Team</label>
           <div className="ta-sel-wrap">
-            <img className="ta-sel-logo" src={getTeamLogo(primary)} alt=""/>
-            <select className="ta-sel" value={primary} onChange={e=>setPrimary(e.target.value)}>
-              {teams.map(t=><option key={t} value={t}>{t}</option>)}
+            <img className="ta-sel-logo" src={getTeamLogo(primary)} alt="" />
+            <select className="ta-sel" value={primary} onChange={e => setPrimary(e.target.value)}>
+              {teams.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
         <div className="ta-sel-group">
           <label className="ta-sel-lbl">Opponent</label>
           <div className="ta-sel-wrap">
-            <img className="ta-sel-logo" src={getTeamLogo(opponent)} alt=""/>
-            <select className="ta-sel" value={opponent} onChange={e=>setOpponent(e.target.value)}>
-              {teams.filter(t=>t!==primary).map(t=><option key={t} value={t}>{t}</option>)}
+            <img className="ta-sel-logo" src={getTeamLogo(opponent)} alt="" />
+            <select className="ta-sel" value={opponent} onChange={e => setOpponent(e.target.value)}>
+              {teams.filter(t => t !== primary).map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
       </div>
 
       {/* KPIs */}
-      {teamKpis&&(
+      {teamKpis && (
         <div className="ta-section">
           <div className="ta-stitle">
-            <img src={getTeamLogo(primary)} alt="" style={{width:24,height:24,objectFit:"contain"}}/>
+            <img src={getTeamLogo(primary)} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
             {primary} — Overall Stats
           </div>
           <div className="ta-kpi-grid">
@@ -209,52 +265,86 @@ export default function TeamAnalysis() {
       )}
 
       {/* H2H */}
-      {primary===opponent?(
+      {primary === opponent ? (
         <div className="ta-prompt">Select two different teams to see head-to-head stats.</div>
-      ):h2h&&h2h.total>0?(
+      ) : h2h && h2h.total > 0 ? (
         <div className="ta-section">
           <div className="ta-stitle">⚔️ Head-to-Head</div>
           <div className="ta-glass">
             <div className="ta-h2h-banner">
               <div className="ta-h2h-team">
-                <img className="ta-h2h-logo" src={getTeamLogo(primary)} alt=""/>
+                <img className="ta-h2h-logo" src={getTeamLogo(primary)} alt="" />
                 <div className="ta-h2h-name">{primary}</div>
-                <div className="ta-h2h-wins" style={{color:"#00c6ff"}}>{h2h.primaryWins}</div>
+                <div className="ta-h2h-wins" style={{ color: "#00c6ff" }}>{h2h.primaryWins}</div>
               </div>
               <div className="ta-h2h-vs">{h2h.total} matches</div>
               <div className="ta-h2h-team">
-                <img className="ta-h2h-logo" src={getTeamLogo(opponent)} alt=""/>
+                <img className="ta-h2h-logo" src={getTeamLogo(opponent)} alt="" />
                 <div className="ta-h2h-name">{opponent}</div>
-                <div className="ta-h2h-wins" style={{color:"#f59e0b"}}>{h2h.opponentWins}</div>
+                <div className="ta-h2h-wins" style={{ color: "#f59e0b" }}>{h2h.opponentWins}</div>
               </div>
             </div>
-            {donut&&<div className="ta-chart-wrap"><Chart options={donut.options} series={donut.series} type="donut" height={320}/></div>}
+            {donut && <div className="ta-chart-wrap"><Chart options={donut.options} series={donut.series} type="donut" height={320} /></div>}
+
+            {/* ── H2H Stat Comparison Board ── */}
+            {h2hLoading ? (
+              <div className="ta-h2h-loading">⏳ Loading detailed stats…</div>
+            ) : h2hStats && (
+              <div className="ta-h2h-board">
+                <div className="ta-h2h-board-title">Detailed Comparison</div>
+                {([
+                  { label: "Played", k: "won" as const, t1: h2hStats.played, t2: h2hStats.played, higher: false },
+                  { label: "Won", k: "won" as const, t1: h2hStats.team1.won, t2: h2hStats.team2.won, higher: true },
+                  { label: "Highest Total", k: "highest_total" as const, t1: h2hStats.team1.highest_total, t2: h2hStats.team2.highest_total, higher: true },
+                  { label: "Lowest Total", k: "lowest_total" as const, t1: h2hStats.team1.lowest_total, t2: h2hStats.team2.lowest_total, higher: false },
+                  { label: "Tosses Won", k: "tosses_won" as const, t1: h2hStats.team1.tosses_won, t2: h2hStats.team2.tosses_won, higher: true },
+                  { label: "Elected to Bat", k: "elected_bat" as const, t1: h2hStats.team1.elected_bat, t2: h2hStats.team2.elected_bat, higher: false },
+                  { label: "Elected to Field", k: "elected_field" as const, t1: h2hStats.team1.elected_field, t2: h2hStats.team2.elected_field, higher: false },
+                  { label: "Won Toss & Match", k: "toss_and_match_won" as const, t1: h2hStats.team1.toss_and_match_won, t2: h2hStats.team2.toss_and_match_won, higher: true },
+                  { label: "Avg. Runs", k: "avg_runs" as const, t1: h2hStats.team1.avg_runs, t2: h2hStats.team2.avg_runs, higher: true },
+                  { label: "Avg. Wkts", k: "avg_wickets" as const, t1: h2hStats.team1.avg_wickets, t2: h2hStats.team2.avg_wickets, higher: true },
+                ] as const).map(row => {
+                  const t1Win = row.higher ? row.t1 > row.t2 : row.t1 < row.t2;
+                  const t2Win = row.higher ? row.t2 > row.t1 : row.t1 > row.t2 ? false : row.t2 < row.t1;
+                  const equal = row.t1 === row.t2;
+                  const lClass = equal ? "" : t1Win ? "ta-h2h-val--bright-blue" : "ta-h2h-val--dim";
+                  const rClass = equal ? "" : t2Win ? "ta-h2h-val--bright-amber" : "ta-h2h-val--dim";
+                  return (
+                    <div className="ta-h2h-stat-row" key={row.label}>
+                      <div className={`ta-h2h-val-l ${lClass}`}>{typeof row.t1 === "number" ? Number.isInteger(row.t1) ? row.t1 : row.t1.toFixed(1) : row.t1}</div>
+                      <div className="ta-h2h-label">{row.label}</div>
+                      <div className={`ta-h2h-val-r ${rClass}`}>{typeof row.t2 === "number" ? Number.isInteger(row.t2) ? row.t2 : row.t2.toFixed(1) : row.t2}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      ):(
+      ) : (
         <div className="ta-prompt">No head-to-head matches found.</div>
       )}
 
-      <hr className="ta-divider"/>
+      <hr className="ta-divider" />
 
       {/* Franchise Directory */}
       <div className="ta-section">
         <div className="ta-stitle">🏢 Franchise Directory</div>
         <div className="ta-fran-grid">
-          {FRANCHISE_DETAILS.map(f=>(
-            <div key={f.name} className={`ta-fran-card${selectedFran===f.name?" ta-fran-card--active":""}`}
-              onClick={()=>setSelectedFran(selectedFran===f.name?null:f.name)}>
-              <img className="ta-fran-logo" src={getTeamLogo(f.name)} alt=""/>
+          {FRANCHISE_DETAILS.map(f => (
+            <div key={f.name} className={`ta-fran-card${selectedFran === f.name ? " ta-fran-card--active" : ""}`}
+              onClick={() => setSelectedFran(selectedFran === f.name ? null : f.name)}>
+              <img className="ta-fran-logo" src={getTeamLogo(f.name)} alt="" />
               <span className="ta-fran-name">{f.name}</span>
             </div>
           ))}
         </div>
 
         {/* Detail panel */}
-        <div className={`ta-glass ta-detail ${activeFran?"ta-detail--open":"ta-detail--closed"}`}>
-          {activeFran&&(
+        <div className={`ta-glass ta-detail ${activeFran ? "ta-detail--open" : "ta-detail--closed"}`}>
+          {activeFran && (
             <div className="ta-detail-inner">
-              <img className="ta-detail-logo" src={getTeamLogo(activeFran.name)} alt=""/>
+              <img className="ta-detail-logo" src={getTeamLogo(activeFran.name)} alt="" />
               <div className="ta-detail-info">
                 <div className="ta-detail-name">{activeFran.name}</div>
                 <div className="ta-detail-row"><span className="ta-detail-key">Captain</span><span className="ta-detail-val">{activeFran.captain}</span></div>
@@ -264,7 +354,7 @@ export default function TeamAnalysis() {
                 <div className="ta-detail-row">
                   <span className="ta-detail-key">Key Players</span>
                   <div className="ta-detail-players">
-                    {activeFran.keyPlayers.map(p=><span className="ta-detail-player" key={p}>{p}</span>)}
+                    {activeFran.keyPlayers.map(p => <span className="ta-detail-player" key={p}>{p}</span>)}
                   </div>
                 </div>
               </div>

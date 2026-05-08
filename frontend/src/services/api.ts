@@ -94,4 +94,14 @@ export async function fetchScoreEvolution() {
   }
 }
 
+export async function fetchHeadToHeadStats(team1: string, team2: string) {
+  try {
+    const response = await api.get(`/teams/h2h?team1=${team1}&team2=${team2}`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch head-to-head stats:", error);
+    throw error;
+  }
+}
+
 export default api;

@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from database import get_db
 from models import Match, BatsmanSeasonStat, BowlerSeasonStat, PlayerSeasonStat
@@ -278,3 +279,88 @@ def score_evolution(db: Session = Depends(get_db)):
         }
         for r in rows
     ]
+
+# ══════════════════════════════════════════════════════════════════════════
+# DASHBOARD ANALYTICS ROUTES
+# ═══════════════════════════════════════════════════════════════════════════
+@app.get("/api/teams/h2h")
+def get_head_to_head_stats(team1: str, team2: str, db: Session = Depends(get_db)):
+    """Fetches complex Head-to-Head analytics between two teams."""
+    
+    # 1. Query the matches table for wins, tosses, and decisions
+    matches_query = text("""
+        SELECT 
+            COUNT(id) as played,
+            SUM(CASE WHEN winner = :t1 THEN 1 ELSE 0 END) as t1_wins,
+            SUM(CASE WHEN winner = :t2 THEN 1 ELSE 0 END) as t2_wins,
+            SUM(CASE WHEN toss_winner = :t1 THEN 1 ELSE 0 END) as t1_toss_won,
+            SUM(CASE WHEN toss_winner = :t2 THEN 1 ELSE 0 END) as t2_toss_won,
+            SUM(CASE WHEN toss_winner = :t1 AND toss_decision = 'bat' THEN 1 ELSE 0 END) as t1_toss_bat,
+            SUM(CASE WHEN toss_winner = :t2 AND toss_decision = 'bat' THEN 1 ELSE 0 END) as t2_toss_bat,
+            SUM(CASE WHEN toss_winner = :t1 AND toss_decision = 'field' THEN 1 ELSE 0 END) as t1_toss_field,
+            SUM(CASE WHEN toss_winner = :t2 AND toss_decision = 'field' THEN 1 ELSE 0 END) as t2_toss_field,
+            SUM(CASE WHEN toss_winner = :t1 AND winner = :t1 THEN 1 ELSE 0 END) as t1_toss_win_match_win,
+            SUM(CASE WHEN toss_winner = :t2 AND winner = :t2 THEN 1 ELSE 0 END) as t2_toss_win_match_win
+        FROM matches
+        WHERE (team1 = :t1 AND team2 = :t2) OR (team1 = :t2 AND team2 = :t1)
+    """)
+    
+    match_stats = db.execute(matches_query, {"t1": team1, "t2": team2}).mappings().fetchone()
+    
+    if not match_stats or match_stats['played'] == 0:
+        raise HTTPException(status_code=404, detail="No matches found between these teams.")
+
+    # 2. Query the deliveries table for runs and wickets in these specific matches
+    innings_query = text("""
+        SELECT 
+            batting_team,
+            match_id,
+            SUM(total_runs) as runs,
+            SUM(CASE WHEN player_dismissed IS NOT NULL THEN 1 ELSE 0 END) as wickets
+        FROM deliveries
+        WHERE match_id IN (
+            SELECT id FROM matches 
+            WHERE (team1 = :t1 AND team2 = :t2) OR (team1 = :t2 AND team2 = :t1)
+        )
+        GROUP BY batting_team, match_id
+    """)
+    
+    innings_stats = db.execute(innings_query, {"t1": team1, "t2": team2}).mappings().fetchall()
+    
+    # 3. Calculate Highs, Lows, and Averages in Python
+    t1_scores = [row['runs'] for row in innings_stats if row['batting_team'] == team1]
+    t2_scores = [row['runs'] for row in innings_stats if row['batting_team'] == team2]
+    
+    t1_wickets = [row['wickets'] for row in innings_stats if row['batting_team'] == team1]
+    t2_wickets = [row['wickets'] for row in innings_stats if row['batting_team'] == team2]
+
+    def safe_calc(arr, func, default=0):
+        return round(func(arr), 2) if arr else default
+
+    return {
+        "played": match_stats['played'],
+        "team1": {
+            "name": team1,
+            "won": match_stats['t1_wins'],
+            "highest_total": safe_calc(t1_scores, max),
+            "lowest_total": safe_calc(t1_scores, min),
+            "tosses_won": match_stats['t1_toss_won'],
+            "elected_bat": match_stats['t1_toss_bat'],
+            "elected_field": match_stats['t1_toss_field'],
+            "toss_and_match_won": match_stats['t1_toss_win_match_win'],
+            "avg_runs": safe_calc(t1_scores, lambda x: sum(x)/len(x)),
+            "avg_wickets": safe_calc(t1_wickets, lambda x: sum(x)/len(x))
+        },
+        "team2": {
+            "name": team2,
+            "won": match_stats['t2_wins'],
+            "highest_total": safe_calc(t2_scores, max),
+            "lowest_total": safe_calc(t2_scores, min),
+            "tosses_won": match_stats['t2_toss_won'],
+            "elected_bat": match_stats['t2_toss_bat'],
+            "elected_field": match_stats['t2_toss_field'],
+            "toss_and_match_won": match_stats['t2_toss_win_match_win'],
+            "avg_runs": safe_calc(t2_scores, lambda x: sum(x)/len(x)),
+            "avg_wickets": safe_calc(t2_wickets, lambda x: sum(x)/len(x))
+        }
+    }
