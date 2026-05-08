@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Chart from "react-apexcharts";
 import { fetchMatches } from "../services/api";
+import { getTeamLogo } from "../utils/teamLogos";
 import type { ApexOptions } from "apexcharts";
 
-/* ── Match shape (mirrors backend MatchResponse) ────────────────────────── */
+/* ── Match shape ────────────────────────────────────────────────────────── */
 interface Match {
   id: number;
   season: number;
@@ -27,106 +28,172 @@ interface Match {
   umpire2: string | null;
 }
 
-/* ── Styles ──────────────────────────────────────────────────────────────── */
-const styles: Record<string, React.CSSProperties> = {
-  wrapper: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-    padding: "2.5rem 2rem",
-    fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    color: "#e2e8f0",
-  },
-  heading: {
-    fontSize: "2rem",
-    fontWeight: 700,
-    textAlign: "center" as const,
-    marginBottom: "2rem",
-    background: "linear-gradient(90deg, #f7971e, #ffd200)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    letterSpacing: "0.5px",
-  },
+/* ── CSS-in-JS (Premium Dark Theme) ─────────────────────────────────────── */
+const css = `
+  .ov-wrapper {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0a0e1a 0%, #111827 40%, #0f172a 100%);
+    padding: 2.5rem 2rem;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #e2e8f0;
+  }
+  .ov-heading {
+    font-size: 2.2rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 0.4rem;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #f7971e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.5px;
+  }
+  .ov-subtitle {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 2.5rem;
+  }
 
   /* KPI grid */
-  kpiGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "1.5rem",
-    marginBottom: "2.5rem",
-    maxWidth: "1100px",
-    marginLeft: "auto",
-    marginRight: "auto",
-  },
-  kpiCard: {
-    background: "rgba(255,255,255,0.06)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "16px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    padding: "1.5rem 1.25rem",
-    textAlign: "center" as const,
-    transition: "transform 0.25s ease, box-shadow 0.25s ease",
-  },
-  kpiValue: {
-    fontSize: "2.25rem",
-    fontWeight: 800,
-    background: "linear-gradient(135deg, #00c6ff, #0072ff)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-  },
-  kpiLabel: {
-    marginTop: "0.4rem",
-    fontSize: "0.85rem",
-    fontWeight: 500,
-    color: "#94a3b8",
-    textTransform: "uppercase" as const,
-    letterSpacing: "1.2px",
-  },
+  .ov-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto 3rem;
+  }
+  .ov-kpi-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .ov-kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 40px rgba(0,114,255,0.15);
+    border-color: rgba(0,198,255,0.15);
+  }
+  .ov-kpi-icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
+  .ov-kpi-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+  }
+  .ov-kpi-value--warm {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .ov-kpi-label {
+    margin-top: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
 
   /* Chart card */
-  chartCard: {
-    maxWidth: "900px",
-    marginLeft: "auto",
-    marginRight: "auto",
-    background: "rgba(255,255,255,0.06)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "16px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    padding: "2rem",
-  },
-  chartTitle: {
-    fontSize: "1.15rem",
-    fontWeight: 600,
-    marginBottom: "1rem",
-    color: "#cbd5e1",
-  },
+  .ov-chart-card {
+    max-width: 920px;
+    margin: 0 auto 2.5rem;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 2rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .ov-chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+  }
+
+  /* Recent match card */
+  .ov-recent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .ov-match-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 1rem 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .ov-match-card:hover { border-color: rgba(0,198,255,0.2); }
+  .ov-match-logos {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+  .ov-match-logo { width: 36px; height: 36px; object-fit: contain; }
+  .ov-match-vs {
+    font-size: 0.7rem;
+    color: #475569;
+    font-weight: 700;
+  }
+  .ov-match-info { flex: 1; min-width: 0; }
+  .ov-match-teams {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ov-match-detail {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.15rem;
+  }
+  .ov-match-winner {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #34d399;
+    white-space: nowrap;
+  }
 
   /* States */
-  center: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "60vh",
-    fontSize: "1.1rem",
-  },
-  errorBox: {
-    display: "flex",
-    flexDirection: "column" as const,
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "60vh",
-    gap: "1rem",
-  },
-  retryBtn: {
-    padding: "0.6rem 1.6rem",
-    borderRadius: "8px",
-    border: "none",
-    background: "linear-gradient(135deg, #f7971e, #ffd200)",
-    color: "#1e1b4b",
-    fontWeight: 600,
-    cursor: "pointer",
-    fontSize: "0.95rem",
-  },
-};
+  .ov-center {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 60vh; font-size: 1.1rem;
+  }
+  .ov-error-box {
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center; min-height: 60vh; gap: 1rem;
+  }
+  .ov-retry-btn {
+    padding: 0.65rem 1.8rem; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: #1e1b4b; font-weight: 700; cursor: pointer; font-size: 0.9rem;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .ov-section-title {
+    font-size: 1.1rem; font-weight: 600; color: #94a3b8;
+    margin-bottom: 1.25rem; text-align: center;
+  }
+`;
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function OverviewDashboard() {
@@ -143,146 +210,120 @@ export default function OverviewDashboard() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   /* ── KPI calculations ─────────────────────────────────────────────────── */
   const kpis = useMemo(() => {
     if (matches.length === 0) return null;
-
     const totalMatches = matches.length;
-    const seasons = new Set(matches.map((m) => m.season));
-    const totalSeasons = seasons.size;
-
-    // Unique venues
-    const venues = new Set(matches.map((m) => m.venue).filter(Boolean));
-    const totalVenues = venues.size;
-
-    // Super-over matches
+    const totalSeasons = new Set(matches.map((m) => m.season)).size;
+    const totalVenues = new Set(matches.map((m) => m.venue).filter(Boolean)).size;
     const superOvers = matches.filter(
       (m) => m.super_over && m.super_over.trim().toUpperCase() === "Y"
     ).length;
 
-    return { totalMatches, totalSeasons, totalVenues, superOvers };
+    // total runs scored (from target_runs or result_margin approximation — we show matches-based KPIs)
+    const totalSixes = 0; // would need deliveries — skip for now
+    return { totalMatches, totalSeasons, totalVenues, superOvers, totalSixes };
   }, [matches]);
 
-  /* ── Top-5 winning teams chart data ───────────────────────────────────── */
+  /* ── Top-5 winning teams ──────────────────────────────────────────────── */
   const chartData = useMemo(() => {
     if (matches.length === 0) return null;
-
     const winCount: Record<string, number> = {};
-    matches.forEach((m) => {
-      if (m.winner) {
-        winCount[m.winner] = (winCount[m.winner] || 0) + 1;
-      }
-    });
+    matches.forEach((m) => { if (m.winner) winCount[m.winner] = (winCount[m.winner] || 0) + 1; });
 
-    const sorted = Object.entries(winCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
+    const sorted = Object.entries(winCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const categories = sorted.map(([team]) => team);
     const values = sorted.map(([, count]) => count);
 
     const options: ApexOptions = {
-      chart: {
-        type: "bar",
-        background: "transparent",
-        toolbar: { show: false },
-        animations: {
-          enabled: true,
-          easing: "easeinout",
-          speed: 800,
-        }as any,
-      },
+      chart: { type: "bar", background: "transparent", toolbar: { show: false },
+        animations: { enabled: true, easing: "easeinout", speed: 800 } as any },
       theme: { mode: "dark" },
-      plotOptions: {
-        bar: {
-          borderRadius: 6,
-          columnWidth: "55%",
-          distributed: true,
-        },
-      },
+      plotOptions: { bar: { borderRadius: 8, columnWidth: "52%", distributed: true } },
       colors: ["#00c6ff", "#0072ff", "#7c3aed", "#f59e0b", "#10b981"],
       dataLabels: { enabled: true, style: { fontSize: "13px", fontWeight: 700 } },
-      xaxis: {
-        categories,
-        labels: { style: { colors: "#94a3b8", fontSize: "12px" } },
-      },
-      yaxis: {
-        labels: { style: { colors: "#94a3b8" } },
-      },
-      grid: { borderColor: "rgba(255,255,255,0.06)" },
+      xaxis: { categories, labels: { style: { colors: "#64748b", fontSize: "11px" } } },
+      yaxis: { labels: { style: { colors: "#64748b" } } },
+      grid: { borderColor: "rgba(255,255,255,0.04)" },
       legend: { show: false },
       tooltip: { theme: "dark" },
     };
-
-    const series = [{ name: "Wins", data: values }];
-
-    return { options, series };
+    return { options, series: [{ name: "Wins", data: values }] };
   }, [matches]);
+
+  /* ── Recent 6 matches ─────────────────────────────────────────────────── */
+  const recentMatches = useMemo(() => matches.slice(0, 6), [matches]);
 
   /* ── Render ────────────────────────────────────────────────────────────── */
   if (loading) {
-    return (
-      <div style={{ ...styles.wrapper, ...styles.center }}>
-        <span style={{ opacity: 0.7 }}>⏳ Loading match data…</span>
-      </div>
-    );
+    return (<><style>{css}</style><div className="ov-wrapper ov-center"><span style={{ opacity: 0.7 }}>⏳ Loading match data…</span></div></>);
   }
-
   if (error) {
-    return (
-      <div style={{ ...styles.wrapper, ...styles.errorBox }}>
-        <span style={{ color: "#f87171" }}>❌ {error}</span>
-        <button style={styles.retryBtn} onClick={loadData}>
-          Retry
-        </button>
-      </div>
-    );
+    return (<><style>{css}</style><div className="ov-wrapper ov-error-box"><span style={{ color: "#f87171" }}>❌ {error}</span><button className="ov-retry-btn" onClick={loadData}>Retry</button></div></>);
   }
 
   return (
-    <div style={styles.wrapper}>
-      <h1 style={styles.heading}>📊 IPL Overview Dashboard</h1>
+    <>
+      <style>{css}</style>
+      <div className="ov-wrapper">
+        <h1 className="ov-heading">IPL Overview Dashboard</h1>
+        <p className="ov-subtitle">Comprehensive analytics across all IPL seasons (2008–2024)</p>
 
-      {/* KPI Cards */}
-      {kpis && (
-        <div style={styles.kpiGrid}>
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiValue}>{kpis.totalMatches}</div>
-            <div style={styles.kpiLabel}>Total Matches</div>
-          </div>
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiValue}>{kpis.totalSeasons}</div>
-            <div style={styles.kpiLabel}>Seasons Covered</div>
-          </div>
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiValue}>{kpis.totalVenues}</div>
-            <div style={styles.kpiLabel}>Unique Venues</div>
-          </div>
-          <div style={styles.kpiCard}>
-            <div style={{ ...styles.kpiValue, background: "linear-gradient(135deg, #f59e0b, #ef4444)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {kpis.superOvers}
+        {/* KPI Cards */}
+        {kpis && (
+          <div className="ov-kpi-grid">
+            <div className="ov-kpi-card">
+              <div className="ov-kpi-icon">🏏</div>
+              <div className="ov-kpi-value">{kpis.totalMatches.toLocaleString()}</div>
+              <div className="ov-kpi-label">Total Matches</div>
             </div>
-            <div style={styles.kpiLabel}>Super Overs</div>
+            <div className="ov-kpi-card">
+              <div className="ov-kpi-icon">📅</div>
+              <div className="ov-kpi-value">{kpis.totalSeasons}</div>
+              <div className="ov-kpi-label">Seasons</div>
+            </div>
+            <div className="ov-kpi-card">
+              <div className="ov-kpi-icon">🏟️</div>
+              <div className="ov-kpi-value">{kpis.totalVenues}</div>
+              <div className="ov-kpi-label">Venues</div>
+            </div>
+            <div className="ov-kpi-card">
+              <div className="ov-kpi-icon">⚡</div>
+              <div className="ov-kpi-value ov-kpi-value--warm">{kpis.superOvers}</div>
+              <div className="ov-kpi-label">Super Overs</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Top-5 Teams Bar Chart */}
-      {chartData && (
-        <div style={styles.chartCard}>
-          <h2 style={styles.chartTitle}>🏆 Top 5 Teams by Wins</h2>
-          <Chart
-            options={chartData.options}
-            series={chartData.series}
-            type="bar"
-            height={360}
-          />
+        {/* Bar Chart */}
+        {chartData && (
+          <div className="ov-chart-card">
+            <h2 className="ov-chart-title">🏆 Most Successful Teams</h2>
+            <Chart options={chartData.options} series={chartData.series} type="bar" height={360} />
+          </div>
+        )}
+
+        {/* Recent Matches */}
+        <h2 className="ov-section-title">Recent Matches</h2>
+        <div className="ov-recent-grid">
+          {recentMatches.map((m) => (
+            <div className="ov-match-card" key={m.id}>
+              <div className="ov-match-logos">
+                <img className="ov-match-logo" src={getTeamLogo(m.team1)} alt="" />
+                <span className="ov-match-vs">VS</span>
+                <img className="ov-match-logo" src={getTeamLogo(m.team2)} alt="" />
+              </div>
+              <div className="ov-match-info">
+                <div className="ov-match-teams">{m.team1} vs {m.team2}</div>
+                <div className="ov-match-detail">{m.venue} • {m.date}</div>
+              </div>
+              {m.winner && <div className="ov-match-winner">🏆 {m.winner.split(" ").pop()}</div>}
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
