@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import Chart from "react-apexcharts";
 import { fetchTopBatsmen, fetchTopBowlers, fetchPlayerStats } from "../services/api";
 import { getPlayerAvatar } from "../utils/teamLogos";
-import type { ApexAxisChartSeries, ApexOptions } from "apexcharts";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 interface Batsman {
@@ -36,29 +34,132 @@ const css = `
   }
   .pa-subtitle { text-align: center; color: #64748b; font-size: 0.9rem; margin-bottom: 2.5rem; }
 
-  /* Charts row */
-  .pa-charts-row {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 1.5rem; max-width: 1100px; margin: 0 auto 3rem;
+  /* ── Hall of Fame columns ──────────────────────────────────────────────── */
+  .pa-hof-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem; max-width: 1100px; margin: 0 auto 3rem;
   }
-  .pa-chart-card {
+  @media (max-width: 768px) { .pa-hof-grid { grid-template-columns: 1fr; } }
+
+  .pa-column { display: flex; flex-direction: column; gap: 0; }
+  .pa-col-header {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.8rem 1.25rem; border-radius: 14px 14px 0 0;
+    font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .pa-col-header--orange {
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(251,191,36,0.08));
+    border: 1px solid rgba(245,158,11,0.2); border-bottom: none; color: #fbbf24;
+  }
+  .pa-col-header--purple {
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(139,92,246,0.08));
+    border: 1px solid rgba(124,58,237,0.2); border-bottom: none; color: #a78bfa;
+  }
+  .pa-col-header-icon { font-size: 1.3rem; }
+
+  /* ── Marquee (No.1) card ───────────────────────────────────────────────── */
+  .pa-marquee {
+    display: flex; align-items: center; gap: 1.25rem;
+    padding: 1.5rem; position: relative;
     background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
-    border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);
-    padding: 1.75rem; box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    transition: transform 0.3s, box-shadow 0.3s;
   }
-  .pa-chart-title {
-    font-size: 1rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.75rem;
+  .pa-marquee:hover {
+    transform: translateY(-3px);
+  }
+  .pa-marquee--orange {
+    border: 1px solid rgba(245,158,11,0.2); border-top: none;
+    box-shadow: inset 0 0 30px rgba(245,158,11,0.04);
+  }
+  .pa-marquee--orange:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.1); }
+  .pa-marquee--purple {
+    border: 1px solid rgba(124,58,237,0.2); border-top: none;
+    box-shadow: inset 0 0 30px rgba(124,58,237,0.04);
+  }
+  .pa-marquee--purple:hover { box-shadow: 0 8px 32px rgba(124,58,237,0.1); }
+
+  .pa-marquee-rank {
+    font-size: 2.5rem; font-weight: 900; line-height: 1;
+    opacity: 0.15; position: absolute; top: 0.5rem; right: 1rem;
+  }
+  .pa-marquee-avatar {
+    width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  }
+  .pa-marquee-avatar--orange { border: 3px solid rgba(245,158,11,0.4); }
+  .pa-marquee-avatar--purple { border: 3px solid rgba(124,58,237,0.4); }
+
+  .pa-marquee-info { flex: 1; }
+  .pa-marquee-name { font-size: 1.15rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.2rem; }
+  .pa-marquee-stat { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+  .pa-marquee-stat--orange {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .pa-marquee-stat--purple {
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .pa-marquee-stat-label {
+    font-size: 0.7rem; font-weight: 600; color: #64748b;
+    text-transform: uppercase; letter-spacing: 1.2px; margin-top: 0.25rem;
+  }
+  .pa-marquee-extras {
+    display: flex; gap: 1rem; margin-top: 0.5rem;
+  }
+  .pa-marquee-extra {
+    font-size: 0.75rem; color: #94a3b8;
+  }
+  .pa-marquee-extra strong { color: #cbd5e1; font-weight: 700; }
+
+  /* ── Leaderboard list ──────────────────────────────────────────────────── */
+  .pa-list {
+    border-radius: 0 0 14px 14px; overflow: hidden;
+  }
+  .pa-list--orange { border: 1px solid rgba(245,158,11,0.12); border-top: none; }
+  .pa-list--purple { border: 1px solid rgba(124,58,237,0.12); border-top: none; }
+
+  .pa-list-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.2s;
+  }
+  .pa-list-row:last-child { border-bottom: none; }
+  .pa-list-row:hover { background: rgba(255,255,255,0.05); }
+
+  .pa-list-rank {
+    width: 1.5rem; font-size: 0.8rem; font-weight: 700; color: #475569; text-align: center;
+  }
+  .pa-list-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.06);
+  }
+  .pa-list-name {
+    flex: 1; font-size: 0.85rem; font-weight: 500; color: #cbd5e1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pa-list-stat { font-size: 0.9rem; font-weight: 700; min-width: 3.5rem; text-align: right; }
+  .pa-list-stat--orange { color: #fbbf24; }
+  .pa-list-stat--purple { color: #a78bfa; }
+  .pa-list-stat-unit { font-size: 0.65rem; color: #64748b; font-weight: 500; margin-left: 0.2rem; }
+
+  /* ── Divider ───────────────────────────────────────────────────────────── */
+  .pa-divider {
+    max-width: 1100px; margin: 0 auto 2.5rem;
+    border: none; border-top: 1px solid rgba(255,255,255,0.06);
   }
 
-  /* Search section */
-  .pa-search-section { max-width: 600px; margin: 0 auto 2rem; }
+  /* ── Search section ────────────────────────────────────────────────────── */
+  .pa-search-section { max-width: 640px; margin: 0 auto 2rem; }
   .pa-section-heading {
     font-size: 1.15rem; font-weight: 600; color: #94a3b8;
     text-align: center; margin-bottom: 1rem;
   }
   .pa-search-row { display: flex; gap: 0.75rem; }
   .pa-input {
-    flex: 1; padding: 0.75rem 1rem; border-radius: 12px;
+    flex: 1; padding: 0.75rem 1.25rem; border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(255,255,255,0.04); color: #e2e8f0;
     font-size: 0.95rem; font-family: 'Inter', sans-serif;
@@ -74,47 +175,46 @@ const css = `
   }
   .pa-search-btn:disabled { opacity: 0.6; pointer-events: none; }
 
-  /* Player card */
-  .pa-player-card {
-    max-width: 600px; margin: 1.5rem auto 0;
+  /* ── Player career card ────────────────────────────────────────────────── */
+  .pa-career-card {
+    max-width: 640px; margin: 1.5rem auto 0;
     background: rgba(255,255,255,0.04); backdrop-filter: blur(16px);
-    border-radius: 20px; border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px; border: 1px solid rgba(0,198,255,0.12);
     padding: 2rem; box-shadow: 0 4px 24px rgba(0,0,0,0.2);
     text-align: center;
   }
-  .pa-player-avatar {
-    width: 80px; height: 80px; border-radius: 50%;
-    border: 3px solid rgba(0,198,255,0.3);
-    margin: 0 auto 0.75rem; display: block;
-    box-shadow: 0 0 20px rgba(0,198,255,0.15);
+  .pa-career-avatar {
+    width: 88px; height: 88px; border-radius: 50%;
+    border: 3px solid rgba(0,198,255,0.3); margin: 0 auto 0.75rem; display: block;
+    box-shadow: 0 0 24px rgba(0,198,255,0.12);
   }
-  .pa-player-name {
-    font-size: 1.4rem; font-weight: 800;
+  .pa-career-name {
+    font-size: 1.5rem; font-weight: 800;
     background: linear-gradient(90deg, #00c6ff, #0072ff);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     margin-bottom: 0.5rem;
   }
-  .pa-badge {
+  .pa-career-badge {
     display: inline-block; padding: 0.3rem 0.9rem; border-radius: 20px;
     font-size: 0.75rem; font-weight: 700; letter-spacing: 0.8px;
-    text-transform: uppercase; margin-bottom: 1.25rem;
+    text-transform: uppercase; margin-bottom: 1.5rem;
   }
-  .pa-badge--allrounder {
+  .pa-career-badge--allrounder {
     background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #34d399;
   }
-  .pa-badge--specialist {
+  .pa-career-badge--specialist {
     background: rgba(100,116,139,0.15); border: 1px solid rgba(100,116,139,0.2); color: #94a3b8;
   }
-  .pa-stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;
+  .pa-career-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1rem;
   }
-  .pa-stat-value { font-size: 1.4rem; font-weight: 800; color: #e2e8f0; }
-  .pa-stat-label {
+  .pa-career-stat-val { font-size: 1.5rem; font-weight: 800; color: #e2e8f0; }
+  .pa-career-stat-lbl {
     font-size: 0.68rem; font-weight: 600; color: #64748b;
     text-transform: uppercase; letter-spacing: 1px; margin-top: 0.2rem;
   }
 
-  /* States */
+  /* ── States ────────────────────────────────────────────────────────────── */
   .pa-center { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
   .pa-error-box { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 60vh; gap: 1rem; }
   .pa-retry-btn {
@@ -127,7 +227,9 @@ const css = `
   .pa-inline-error { text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #f87171; }
 `;
 
-/* ── Component ───────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPONENT
+   ═══════════════════════════════════════════════════════════════════════════ */
 export default function PlayerAnalysis() {
   const [batsmen, setBatsmen] = useState<Batsman[]>([]);
   const [bowlers, setBowlers] = useState<Bowler[]>([]);
@@ -156,50 +258,12 @@ export default function PlayerAnalysis() {
       .then((data: PlayerStats) => setSearchedPlayer(data))
       .catch((err) => {
         if (err?.response?.status === 404) {
-          setSearchError(`Player "${name}" not found. Try names like "V Kohli", "RG Sharma", or "JJ Bumrah".`);
+          setSearchError(`Player "${name}" not found. Try "V Kohli", "RG Sharma", or "JJ Bumrah".`);
         } else {
           setSearchError("Something went wrong. Please try again.");
         }
       })
       .finally(() => setSearchLoading(false));
-  };
-
-  const batsmenChart = (): { options: ApexOptions; series: ApexAxisChartSeries } => {
-    const top10 = batsmen.slice(0, 10);
-    return {
-      options: {
-        chart: { type: "bar", background: "transparent", toolbar: { show: false } },
-        theme: { mode: "dark" },
-        plotOptions: { bar: { borderRadius: 6, horizontal: true, distributed: true, barHeight: "65%" } },
-        colors: ["#00c6ff", "#0072ff", "#7c3aed", "#f59e0b", "#10b981", "#ec4899", "#06b6d4", "#8b5cf6", "#f97316", "#14b8a6"],
-        xaxis: { categories: top10.map((b) => b.batter), labels: { style: { colors: "#64748b", fontSize: "11px" } } },
-        yaxis: { labels: { style: { colors: "#64748b", fontSize: "11px" } } },
-        grid: { borderColor: "rgba(255,255,255,0.04)" },
-        legend: { show: false },
-        dataLabels: { enabled: true, style: { fontSize: "11px" } },
-        tooltip: { theme: "dark" },
-      },
-      series: [{ name: "Career Runs", data: top10.map((b) => b.career_runs) }],
-    };
-  };
-
-  const bowlersChart = (): { options: ApexOptions; series: ApexAxisChartSeries } => {
-    const top10 = bowlers.slice(0, 10);
-    return {
-      options: {
-        chart: { type: "bar", background: "transparent", toolbar: { show: false } },
-        theme: { mode: "dark" },
-        plotOptions: { bar: { borderRadius: 6, horizontal: true, distributed: true, barHeight: "65%" } },
-        colors: ["#f59e0b", "#ef4444", "#10b981", "#0072ff", "#7c3aed", "#ec4899", "#06b6d4", "#8b5cf6", "#f97316", "#14b8a6"],
-        xaxis: { categories: top10.map((b) => b.bowler), labels: { style: { colors: "#64748b", fontSize: "11px" } } },
-        yaxis: { labels: { style: { colors: "#64748b", fontSize: "11px" } } },
-        grid: { borderColor: "rgba(255,255,255,0.04)" },
-        legend: { show: false },
-        dataLabels: { enabled: true, style: { fontSize: "11px" } },
-        tooltip: { theme: "dark" },
-      },
-      series: [{ name: "Career Wickets", data: top10.map((b) => b.career_wickets) }],
-    };
   };
 
   const computeDerived = (p: PlayerStats) => {
@@ -210,34 +274,116 @@ export default function PlayerAnalysis() {
     return { strikeRate, battingAvg, economy, isAllRounder };
   };
 
+  /* ── Loading / Error ──────────────────────────────────────────────────── */
   if (loading) return (<><style>{css}</style><div className="pa-wrapper pa-center"><span style={{ opacity: 0.7 }}>⏳ Loading player data…</span></div></>);
   if (error) return (<><style>{css}</style><div className="pa-wrapper pa-error-box"><span style={{ color: "#f87171" }}>❌ {error}</span><button className="pa-retry-btn" onClick={loadTopPerformers}>Retry</button></div></>);
 
-  const batChart = batsmenChart();
-  const bowlChart = bowlersChart();
+  const topBat = batsmen.slice(0, 10);
+  const topBowl = bowlers.slice(0, 10);
+  const bat1 = topBat[0];
+  const bowl1 = topBowl[0];
+  const batRest = topBat.slice(1);
+  const bowlRest = topBowl.slice(1);
 
   return (
     <>
       <style>{css}</style>
       <div className="pa-wrapper">
         <h1 className="pa-heading">Player Analysis</h1>
-        <p className="pa-subtitle">Top performers and searchable career statistics</p>
+        <p className="pa-subtitle">Hall of Fame leaderboards and career statistics</p>
 
-        {/* Charts */}
-        <div className="pa-charts-row">
-          <div className="pa-chart-card">
-            <h3 className="pa-chart-title">🏅 Top 10 Run Scorers</h3>
-            <Chart options={batChart.options} series={batChart.series} type="bar" height={380} />
+        {/* ═══ Hall of Fame ═══ */}
+        <div className="pa-hof-grid">
+
+          {/* ── Orange Cap (Batting) ────────────────────────────────────── */}
+          <div className="pa-column">
+            <div className="pa-col-header pa-col-header--orange">
+              <span className="pa-col-header-icon">🧡</span>
+              Orange Cap Race — Most Career Runs
+            </div>
+
+            {/* Marquee #1 */}
+            {bat1 && (
+              <div className="pa-marquee pa-marquee--orange">
+                <span className="pa-marquee-rank">#1</span>
+                <img className="pa-marquee-avatar pa-marquee-avatar--orange" src={getPlayerAvatar(bat1.batter)} alt={bat1.batter} />
+                <div className="pa-marquee-info">
+                  <div className="pa-marquee-name">{bat1.batter}</div>
+                  <div className="pa-marquee-stat pa-marquee-stat--orange">{bat1.career_runs.toLocaleString()}</div>
+                  <div className="pa-marquee-stat-label">Career Runs</div>
+                  <div className="pa-marquee-extras">
+                    <span className="pa-marquee-extra"><strong>{bat1.career_innings}</strong> Inn</span>
+                    <span className="pa-marquee-extra"><strong>{bat1.career_fours}</strong> 4s</span>
+                    <span className="pa-marquee-extra"><strong>{bat1.career_sixes}</strong> 6s</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rest of top 10 */}
+            <div className="pa-list pa-list--orange">
+              {batRest.map((b, i) => (
+                <div className="pa-list-row" key={b.batter}>
+                  <span className="pa-list-rank">{i + 2}</span>
+                  <img className="pa-list-avatar" src={getPlayerAvatar(b.batter, 64)} alt="" />
+                  <span className="pa-list-name">{b.batter}</span>
+                  <span className="pa-list-stat pa-list-stat--orange">
+                    {b.career_runs.toLocaleString()}
+                    <span className="pa-list-stat-unit">runs</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="pa-chart-card">
-            <h3 className="pa-chart-title">🎯 Top 10 Wicket Takers</h3>
-            <Chart options={bowlChart.options} series={bowlChart.series} type="bar" height={380} />
+
+          {/* ── Purple Cap (Bowling) ────────────────────────────────────── */}
+          <div className="pa-column">
+            <div className="pa-col-header pa-col-header--purple">
+              <span className="pa-col-header-icon">💜</span>
+              Purple Cap Race — Most Career Wickets
+            </div>
+
+            {/* Marquee #1 */}
+            {bowl1 && (
+              <div className="pa-marquee pa-marquee--purple">
+                <span className="pa-marquee-rank">#1</span>
+                <img className="pa-marquee-avatar pa-marquee-avatar--purple" src={getPlayerAvatar(bowl1.bowler)} alt={bowl1.bowler} />
+                <div className="pa-marquee-info">
+                  <div className="pa-marquee-name">{bowl1.bowler}</div>
+                  <div className="pa-marquee-stat pa-marquee-stat--purple">{bowl1.career_wickets}</div>
+                  <div className="pa-marquee-stat-label">Career Wickets</div>
+                  <div className="pa-marquee-extras">
+                    <span className="pa-marquee-extra"><strong>{bowl1.career_matches}</strong> Mat</span>
+                    <span className="pa-marquee-extra"><strong>{bowl1.career_runs_conceded.toLocaleString()}</strong> Conc</span>
+                    <span className="pa-marquee-extra"><strong>{bowl1.career_balls.toLocaleString()}</strong> Balls</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rest of top 10 */}
+            <div className="pa-list pa-list--purple">
+              {bowlRest.map((b, i) => (
+                <div className="pa-list-row" key={b.bowler}>
+                  <span className="pa-list-rank">{i + 2}</span>
+                  <img className="pa-list-avatar" src={getPlayerAvatar(b.bowler, 64)} alt="" />
+                  <span className="pa-list-name">{b.bowler}</span>
+                  <span className="pa-list-stat pa-list-stat--purple">
+                    {b.career_wickets}
+                    <span className="pa-list-stat-unit">wkts</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Search */}
+        {/* ═══ Divider ═══ */}
+        <hr className="pa-divider" />
+
+        {/* ═══ Player Career Search ═══ */}
         <div className="pa-search-section">
-          <h2 className="pa-section-heading">🔍 Player Search</h2>
+          <h2 className="pa-section-heading">🔍 Player Career Search</h2>
           <div className="pa-search-row">
             <input
               className="pa-input"
@@ -258,25 +404,21 @@ export default function PlayerAnalysis() {
           {searchedPlayer && (() => {
             const d = computeDerived(searchedPlayer);
             return (
-              <div className="pa-player-card">
-                <img
-                  className="pa-player-avatar"
-                  src={getPlayerAvatar(searchedPlayer.player)}
-                  alt={searchedPlayer.player}
-                />
-                <h3 className="pa-player-name">{searchedPlayer.player}</h3>
-                <span className={`pa-badge ${d.isAllRounder ? "pa-badge--allrounder" : "pa-badge--specialist"}`}>
+              <div className="pa-career-card">
+                <img className="pa-career-avatar" src={getPlayerAvatar(searchedPlayer.player)} alt={searchedPlayer.player} />
+                <h3 className="pa-career-name">{searchedPlayer.player}</h3>
+                <span className={`pa-career-badge ${d.isAllRounder ? "pa-career-badge--allrounder" : "pa-career-badge--specialist"}`}>
                   {d.isAllRounder ? "⭐ All-Rounder" : "Specialist"}
                 </span>
-                <div className="pa-stats-grid">
-                  <div><div className="pa-stat-value">{searchedPlayer.total_runs.toLocaleString()}</div><div className="pa-stat-label">Total Runs</div></div>
-                  <div><div className="pa-stat-value">{searchedPlayer.total_wickets}</div><div className="pa-stat-label">Wickets</div></div>
-                  <div><div className="pa-stat-value">{searchedPlayer.total_innings}</div><div className="pa-stat-label">Innings</div></div>
-                  <div><div className="pa-stat-value">{d.strikeRate}</div><div className="pa-stat-label">Strike Rate</div></div>
-                  <div><div className="pa-stat-value">{d.battingAvg}</div><div className="pa-stat-label">Batting Avg</div></div>
-                  <div><div className="pa-stat-value">{d.economy}</div><div className="pa-stat-label">Economy</div></div>
-                  <div><div className="pa-stat-value">{searchedPlayer.total_fours}</div><div className="pa-stat-label">Fours</div></div>
-                  <div><div className="pa-stat-value">{searchedPlayer.total_sixes}</div><div className="pa-stat-label">Sixes</div></div>
+                <div className="pa-career-stats">
+                  <div><div className="pa-career-stat-val">{searchedPlayer.total_runs.toLocaleString()}</div><div className="pa-career-stat-lbl">Total Runs</div></div>
+                  <div><div className="pa-career-stat-val">{searchedPlayer.total_wickets}</div><div className="pa-career-stat-lbl">Wickets</div></div>
+                  <div><div className="pa-career-stat-val">{searchedPlayer.total_innings}</div><div className="pa-career-stat-lbl">Innings</div></div>
+                  <div><div className="pa-career-stat-val">{d.strikeRate}</div><div className="pa-career-stat-lbl">Strike Rate</div></div>
+                  <div><div className="pa-career-stat-val">{d.battingAvg}</div><div className="pa-career-stat-lbl">Batting Avg</div></div>
+                  <div><div className="pa-career-stat-val">{d.economy}</div><div className="pa-career-stat-lbl">Economy</div></div>
+                  <div><div className="pa-career-stat-val">{searchedPlayer.total_fours}</div><div className="pa-career-stat-lbl">Fours</div></div>
+                  <div><div className="pa-career-stat-val">{searchedPlayer.total_sixes}</div><div className="pa-career-stat-lbl">Sixes</div></div>
                 </div>
               </div>
             );
