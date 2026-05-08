@@ -4,6 +4,7 @@ import "./App.css";
 import TeamAnalysis from "./components/TeamAnalysis";
 import PlayerAnalysis from "./components/PlayerAnalysis";
 import Predictions from "./components/Predictions";
+import TrophyRoom from "./components/TrophyRoom";
 
 // /* ── Inline placeholder pages ───────────────────────────────────────────── */
 // function TeamsPlaceholder() {
@@ -42,6 +43,7 @@ const navItems = [
   { to: "/teams", label: "Teams", icon: "🏟️" },
   { to: "/players", label: "Players", icon: "🏏" },
   { to: "/predict", label: "Predictions", icon: "🤖" },
+  { to: "/trophies", label: "Trophies", icon: "🏆" },
 ];
 
 /* ── App shell ──────────────────────────────────────────────────────────── */
@@ -83,6 +85,7 @@ export default function App() {
           <Route path="/teams" element={<TeamAnalysis />} />
           <Route path="/players" element={<PlayerAnalysis/>} />
           <Route path="/predict" element={<Predictions />} />
+          <Route path="/trophies" element={<TrophyRoom />} />
         </Routes>
       </main>
     </div>
