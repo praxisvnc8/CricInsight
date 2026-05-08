@@ -74,4 +74,24 @@ export async function predictPlayerPerformance(data: any) {
   }
 }
 
+export async function fetchTossImpact() {
+  try {
+    const response = await api.get("/stats/toss-impact");
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch toss impact:", error);
+    throw error;
+  }
+}
+
+export async function fetchScoreEvolution() {
+  try {
+    const response = await api.get("/stats/score-evolution");
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch score evolution:", error);
+    throw error;
+  }
+}
+
 export default api;

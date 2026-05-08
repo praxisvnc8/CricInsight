@@ -225,3 +225,56 @@ def predict_player(payload: PlayerPerformanceRequest):
         raise HTTPException(status_code=422, detail=f"Prediction error: {exc}")
 
     return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  DASHBOARD ANALYTICS ROUTES
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@app.get("/api/stats/toss-impact")
+def toss_impact(db: Session = Depends(get_db)):
+    """Toss decision impact: win rates when choosing bat vs field."""
+    all_matches = db.query(Match).filter(Match.toss_decision.isnot(None)).all()
+
+    bat_total = bat_wins = field_total = field_wins = 0
+    for m in all_matches:
+        if m.toss_decision == "bat":
+            bat_total += 1
+            if m.toss_winner == m.winner:
+                bat_wins += 1
+        elif m.toss_decision == "field":
+            field_total += 1
+            if m.toss_winner == m.winner:
+                field_wins += 1
+
+    return {
+        "bat_total": bat_total,
+        "bat_wins": bat_wins,
+        "field_total": field_total,
+        "field_wins": field_wins,
+    }
+
+
+@app.get("/api/stats/score-evolution")
+def score_evolution(db: Session = Depends(get_db)):
+    """Average 1st innings score per season."""
+    rows = (
+        db.query(
+            Match.season,
+            func.avg(Match.target_runs).label("avg_target"),
+            func.count(Match.id).label("match_count"),
+        )
+        .filter(Match.target_runs.isnot(None), Match.target_runs > 0)
+        .group_by(Match.season)
+        .order_by(Match.season)
+        .all()
+    )
+    return [
+        {
+            "season": r.season,
+            "avg_score": round(float(r.avg_target) - 1, 1),
+            "match_count": int(r.match_count),
+        }
+        for r in rows
+    ]
