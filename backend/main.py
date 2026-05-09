@@ -188,6 +188,18 @@ def player_stats(player_name: str, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/players/names")
+def player_names(db: Session = Depends(get_db)):
+    """Return a sorted list of all distinct player names for autocomplete."""
+    rows = (
+        db.query(PlayerSeasonStat.player)
+        .distinct()
+        .order_by(PlayerSeasonStat.player)
+        .all()
+    )
+    return [r.player for r in rows]
+
+
 @app.post("/api/predict/innings-score", response_model=InningsScoreResponse)
 def predict_score(payload: InningsScoreRequest):
     """Predict the first-innings total for the batting team."""

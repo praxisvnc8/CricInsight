@@ -94,6 +94,16 @@ export async function fetchScoreEvolution() {
   }
 }
 
+export async function fetchPlayerList(): Promise<string[]> {
+  try {
+    const response = await api.get("/players/names");
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch player list:", error);
+    throw error;
+  }
+}
+
 export async function fetchHeadToHeadStats(team1: string, team2: string) {
   try {
     const response = await api.get(`/teams/h2h?team1=${team1}&team2=${team2}`);

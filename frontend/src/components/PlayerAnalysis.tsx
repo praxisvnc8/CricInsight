@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { fetchTopBatsmen, fetchTopBowlers, fetchPlayerStats } from "../services/api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchTopBatsmen, fetchTopBowlers, fetchPlayerStats, fetchPlayerList } from "../services/api";
 import { getPlayerAvatar } from "../utils/teamLogos";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -157,15 +157,32 @@ const css = `
     font-size: 1.15rem; font-weight: 600; color: #94a3b8;
     text-align: center; margin-bottom: 1rem;
   }
-  .pa-search-row { display: flex; gap: 0.75rem; }
+  .pa-search-row { display: flex; gap: 0.75rem; position: relative; }
+  .pa-ac-wrap { flex: 1; position: relative; }
   .pa-input {
-    flex: 1; padding: 0.75rem 1.25rem; border-radius: 12px;
+    width: 100%; padding: 0.75rem 1.25rem; border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(255,255,255,0.04); color: #e2e8f0;
     font-size: 0.95rem; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.2s;
+    outline: none; transition: border-color 0.2s; box-sizing: border-box;
   }
   .pa-input:focus { border-color: rgba(0,198,255,0.3); }
+  .pa-ac-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    background: rgba(15,23,42,0.96); backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,198,255,0.15); border-radius: 12px;
+    max-height: 320px; overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .pa-ac-item {
+    padding: 0.65rem 1rem; cursor: pointer; font-size: 0.88rem; color: #cbd5e1;
+    display: flex; align-items: center; gap: 0.6rem;
+    transition: background 0.15s;
+  }
+  .pa-ac-item:first-child { border-radius: 12px 12px 0 0; }
+  .pa-ac-item:last-child { border-radius: 0 0 12px 12px; }
+  .pa-ac-item:hover { background: rgba(0,198,255,0.08); color: #fff; }
+  .pa-ac-item img { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); }
   .pa-search-btn {
     padding: 0.75rem 1.5rem; border-radius: 12px; border: none;
     background: linear-gradient(135deg, #00c6ff, #0072ff);
@@ -240,6 +257,9 @@ export default function PlayerAnalysis() {
   const [searchedPlayer, setSearchedPlayer] = useState<PlayerStats | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [playerList, setPlayerList] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const acRef = useRef<HTMLDivElement>(null);
 
   const loadTopPerformers = () => {
     setLoading(true); setError(null);
@@ -250,9 +270,28 @@ export default function PlayerAnalysis() {
   };
   useEffect(() => { loadTopPerformers(); }, []);
 
-  const handleSearch = () => {
-    const name = searchInput.trim();
+  useEffect(() => {
+    fetchPlayerList().then(setPlayerList).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (acRef.current && !acRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const term = searchInput.trim().toLowerCase();
+    if (!term || term.length < 1) return [];
+    return playerList.filter(p => p.toLowerCase().includes(term)).slice(0, 10);
+  }, [searchInput, playerList]);
+
+  const handleSearch = (nameOverride?: string) => {
+    const name = (nameOverride ?? searchInput).trim();
     if (!name) return;
+    setShowSuggestions(false);
     setSearchLoading(true); setSearchError(null); setSearchedPlayer(null);
     fetchPlayerStats(name)
       .then((data: PlayerStats) => setSearchedPlayer(data))
@@ -264,6 +303,12 @@ export default function PlayerAnalysis() {
         }
       })
       .finally(() => setSearchLoading(false));
+  };
+
+  const handleSelectSuggestion = (name: string) => {
+    setSearchInput(name);
+    setShowSuggestions(false);
+    handleSearch(name);
   };
 
   const computeDerived = (p: PlayerStats) => {
@@ -385,15 +430,28 @@ export default function PlayerAnalysis() {
         <div className="pa-search-section">
           <h2 className="pa-section-heading">🔍 Player Career Search</h2>
           <div className="pa-search-row">
-            <input
-              className="pa-input"
-              type="text"
-              placeholder='Enter player name (e.g. "V Kohli")'
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-            <button className="pa-search-btn" disabled={searchLoading} onClick={handleSearch}>
+            <div className="pa-ac-wrap" ref={acRef}>
+              <input
+                className="pa-input"
+                type="text"
+                placeholder='Search player (e.g. "Bumrah", "Kohli")'
+                value={searchInput}
+                onChange={(e) => { setSearchInput(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => { if (searchInput.trim()) setShowSuggestions(true); }}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="pa-ac-dropdown">
+                  {suggestions.map(name => (
+                    <div className="pa-ac-item" key={name} onMouseDown={() => handleSelectSuggestion(name)}>
+                      <img src={getPlayerAvatar(name, 56)} alt="" />
+                      {name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button className="pa-search-btn" disabled={searchLoading} onClick={() => handleSearch()}>
               {searchLoading ? "Searching…" : "Search"}
             </button>
           </div>

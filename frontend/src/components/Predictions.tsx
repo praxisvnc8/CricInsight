@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { predictMatchWinner, predictInningsScore, predictPlayerPerformance, fetchPlayerStats } from "../services/api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { predictMatchWinner, predictInningsScore, predictPlayerPerformance, fetchPlayerStats, fetchPlayerList } from "../services/api";
 import { getTeamLogo, getPlayerAvatar } from "../utils/teamLogos";
 
 const TEAMS = ["Chennai Super Kings","Delhi Capitals","Gujarat Titans","Kolkata Knight Riders","Lucknow Super Giants","Mumbai Indians","Punjab Kings","Rajasthan Royals","Royal Challengers Bengaluru","Sunrisers Hyderabad"];
-const CITIES = ["Mumbai","Chennai","Kolkata","Delhi","Bengaluru","Hyderabad","Jaipur","Ahmedabad","Chandigarh","Lucknow"];
+const CITIES = ["Mumbai","Chennai","Kolkata","Delhi","Bangalore","Hyderabad","Jaipur","Ahmedabad","Chandigarh","Lucknow"];
 
 interface WinnerResult { predicted_winner: string; team1: string; team2: string; team1_prob: number; team2_prob: number; }
 interface ScoreResult { predicted_score: number; score_low: number; score_high: number; batting_team: string; bowling_team: string; }
@@ -98,6 +98,15 @@ const css = `
 .cc-insight-text{font-size:.82rem;color:#94a3b8;line-height:1.55}
 
 .cc-err{text-align:center;color:#f87171;font-size:.88rem;margin-top:.75rem}
+
+/* Autocomplete */
+.cc-ac-wrap{position:relative}
+.cc-ac-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:50;background:rgba(15,23,42,.96);backdrop-filter:blur(20px);border:1px solid rgba(0,198,255,.15);border-radius:12px;max-height:320px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.cc-ac-item{padding:.65rem 1rem;cursor:pointer;font-size:.88rem;color:#cbd5e1;display:flex;align-items:center;gap:.6rem;transition:background .15s}
+.cc-ac-item:first-child{border-radius:12px 12px 0 0}
+.cc-ac-item:last-child{border-radius:0 0 12px 12px}
+.cc-ac-item:hover{background:rgba(0,198,255,.08);color:#fff}
+.cc-ac-item img{width:28px;height:28px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
 `;
 
 export default function Predictions() {
@@ -119,8 +128,29 @@ export default function Predictions() {
 
   // Player state
   const [pn, spn] = useState(""); const [pL, spL] = useState(false);
-  const [pR, spR] = useState<PerfResult|null>(null);
-  const [pE, spE] = useState<string|null>(null); const [pName, spName] = useState("");
+  const [pR, spR] = useState<PerfResult | null>(null);
+  const [pE, spE] = useState<string | null>(null); const [pName, spName] = useState("");
+  const [playerList, setPlayerList] = useState<string[]>([]);
+  const [pSuggShow, setPSuggShow] = useState(false);
+  const pAcRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchPlayerList().then(setPlayerList).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (pAcRef.current && !pAcRef.current.contains(e.target as Node)) setPSuggShow(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const pSuggestions = useMemo(() => {
+    const term = pn.trim().toLowerCase();
+    if (!term) return [];
+    return playerList.filter(p => p.toLowerCase().includes(term)).slice(0, 10);
+  }, [pn, playerList]);
 
   // Handlers
   const doWinner = () => {
@@ -155,6 +185,30 @@ export default function Predictions() {
       if(e?.response?.status===404)spE(`Player "${name}" not found. Try "V Kohli", "JJ Bumrah".`);
       else spE("Classification failed.");
     }finally{spL(false);}
+  };
+
+  const handlePlayerSelect = (name: string) => {
+    spn(name);
+    setPSuggShow(false);
+    // Need to call doPlayer with the selected name directly
+    (async () => {
+      spL(true); spE(null); spR(null);
+      try {
+        const s = await fetchPlayerStats(name); spName(name);
+        const total_runs = s.total_runs ?? 0, innings = s.total_innings ?? 0, balls_faced = s.total_balls_faced ?? 0;
+        const fours = s.total_fours ?? 0, sixes = s.total_sixes ?? 0;
+        const strike_rate = balls_faced > 0 ? parseFloat(((total_runs / balls_faced) * 100).toFixed(2)) : 0;
+        const batting_avg = innings > 0 ? parseFloat((total_runs / innings).toFixed(2)) : 0;
+        const wickets = s.total_wickets ?? 0, runs_conceded = s.total_runs_conceded ?? 0, balls_bowled = s.total_balls_bowled ?? 0;
+        const economy = balls_bowled > 0 ? parseFloat(((runs_conceded / balls_bowled) * 6).toFixed(2)) : 0;
+        const bowling_avg = wickets > 0 ? parseFloat((runs_conceded / wickets).toFixed(2)) : 0;
+        const perf: PerfResult = await predictPlayerPerformance({ innings, balls_faced, total_runs, strike_rate, batting_avg, fours, sixes, wickets, economy, bowling_avg });
+        spR(perf);
+      } catch (e: any) {
+        if (e?.response?.status === 404) spE(`Player "${name}" not found.`);
+        else spE("Classification failed.");
+      } finally { spL(false); }
+    })();
   };
 
   // Render helpers
@@ -291,8 +345,20 @@ export default function Predictions() {
           <div className="cc-fgrid" style={{gridTemplateColumns:"1fr"}}>
             <div className="cc-fg cc-fg--full">
               <label className="cc-lbl">Player Name</label>
-              <input className="cc-inp" type="text" placeholder='"V Kohli", "MS Dhoni", "JJ Bumrah"'
-                value={pn} onChange={e=>spn(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doPlayer()}/>
+              <div className="cc-ac-wrap" ref={pAcRef}>
+                <input className="cc-inp" type="text" placeholder='Search player (e.g. "Bumrah", "Kohli")'
+                  value={pn} onChange={e=>{spn(e.target.value);setPSuggShow(true);}} onFocus={()=>{if(pn.trim())setPSuggShow(true);}} onKeyDown={e=>e.key==="Enter"&&doPlayer()}/>
+                {pSuggShow && pSuggestions.length > 0 && (
+                  <div className="cc-ac-dropdown">
+                    {pSuggestions.map(name => (
+                      <div className="cc-ac-item" key={name} onMouseDown={() => handlePlayerSelect(name)}>
+                        <img src={getPlayerAvatar(name, 56)} alt="" />
+                        {name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <button className="cc-btn" disabled={pL} onClick={doPlayer}>{pL?"⏳ Classifying…":"🧠 Classify Performance"}</button>
