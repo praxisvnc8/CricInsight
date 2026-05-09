@@ -29,6 +29,21 @@ const IPL_CHAMPIONS: Champion[] = [
   { year: 2024, winner: "Kolkata Knight Riders", runnerUp: "Sunrisers Hyderabad", venue: "MA Chidambaram Stadium, Chennai" },
 ];
 
+/* ── All Teams ──────────────────────────────────────────────────────────── */
+const ALL_TEAMS = [
+  "Chennai Super Kings",
+  "Mumbai Indians",
+  "Kolkata Knight Riders",
+  "Royal Challengers Bengaluru",
+  "Rajasthan Royals",
+  "Sunrisers Hyderabad",
+  "Delhi Capitals",
+  "Punjab Kings",
+  "Gujarat Titans",
+  "Lucknow Super Giants",
+  "Deccan Chargers",
+];
+
 /* ── CSS ─────────────────────────────────────────────────────────────────── */
 const css = `
   .tr-wrapper {
@@ -47,23 +62,103 @@ const css = `
     text-align: center; color: #64748b; font-size: 0.9rem; margin-bottom: 2rem;
   }
 
-  /* Filter */
-  .tr-filter-row {
-    display: flex; justify-content: center; margin-bottom: 2.5rem;
+  /* ── Team Selector Grid ─────────────────────────────────────────────────── */
+  .tr-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
   }
-  .tr-filter-input {
-    width: 100%; max-width: 400px;
-    padding: 0.75rem 1.25rem; border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04); color: #e2e8f0;
-    font-size: 0.95rem; font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.2s;
-    backdrop-filter: blur(12px);
+  .tr-team-card {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.75rem;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 2rem 1.25rem 1.5rem;
+    text-align: center;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    overflow: hidden;
   }
-  .tr-filter-input:focus { border-color: rgba(245,158,11,0.4); }
-  .tr-filter-input::placeholder { color: #475569; }
+  .tr-team-card--clickable { cursor: pointer; }
+  .tr-team-card--dimmed { opacity: 0.45; cursor: default; }
+  .tr-team-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 48px rgba(245,158,11,0.12);
+    border-color: rgba(245,158,11,0.25);
+  }
+  .tr-team-card--dimmed:hover {
+    transform: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    border-color: rgba(255,255,255,0.06);
+  }
+  .tr-team-logo {
+    width: 80px; height: 80px; object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(245,158,11,0.15));
+    transition: transform 0.3s;
+  }
+  .tr-team-card:hover .tr-team-logo { transform: scale(1.1); }
+  .tr-team-card--dimmed:hover .tr-team-logo { transform: none; }
+  .tr-team-name {
+    font-size: 0.92rem; font-weight: 600; color: #cbd5e1;
+  }
+  .tr-team-trophies {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;
+    padding: 0.3rem 0.85rem; border-radius: 20px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .tr-team-card:hover .tr-team-trophies {
+    opacity: 1; transform: translateY(0);
+  }
+  .tr-team-trophies--has {
+    background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+    color: #fbbf24; text-shadow: 0 0 12px rgba(245,158,11,0.4);
+  }
+  .tr-team-trophies--none {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: #475569;
+  }
 
-  /* Grid */
+  /* ── Back Button ────────────────────────────────────────────────────────── */
+  .tr-back-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 1.2rem; border-radius: 10px; border: none;
+    background: rgba(255,255,255,0.05); color: #94a3b8;
+    font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+  }
+  .tr-back-btn:hover {
+    background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2);
+    color: #fbbf24;
+  }
+
+  /* ── Detail Header ──────────────────────────────────────────────────────── */
+  .tr-detail-header {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .tr-detail-logo {
+    width: 64px; height: 64px; object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(245,158,11,0.25));
+  }
+  .tr-detail-name {
+    font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .tr-detail-count {
+    font-size: 0.85rem; color: #64748b; text-align: center; margin-top: -1rem; margin-bottom: 2rem;
+  }
+
+  /* ── Year Card Grid (same grid as before) ───────────────────────────────── */
   .tr-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -138,25 +233,6 @@ const css = `
   .tr-runner-logo { width: 20px; height: 20px; object-fit: contain; opacity: 0.6; }
   .tr-runner-text { font-size: 0.75rem; color: #475569; }
 
-  /* Trophy count summary */
-  .tr-summary {
-    display: flex; flex-wrap: wrap; justify-content: center;
-    gap: 1rem; max-width: 1100px; margin: 0 auto 2.5rem;
-  }
-  .tr-summary-item {
-    display: flex; align-items: center; gap: 0.6rem;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px; padding: 0.6rem 1rem;
-    transition: border-color 0.2s;
-  }
-  .tr-summary-item:hover { border-color: rgba(245,158,11,0.2); }
-  .tr-summary-logo { width: 28px; height: 28px; object-fit: contain; }
-  .tr-summary-name { font-size: 0.82rem; color: #94a3b8; font-weight: 500; }
-  .tr-summary-count {
-    font-size: 1rem; font-weight: 800; color: #fbbf24;
-    min-width: 1.5rem; text-align: center;
-  }
-
   /* No results */
   .tr-no-results {
     grid-column: 1 / -1; text-align: center;
@@ -166,7 +242,7 @@ const css = `
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 export default function TrophyRoom() {
-  const [filter, setFilter] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
   /* Trophy count per team */
   const trophyCounts = useMemo(() => {
@@ -174,22 +250,14 @@ export default function TrophyRoom() {
     IPL_CHAMPIONS.forEach((c) => {
       counts[c.winner] = (counts[c.winner] || 0) + 1;
     });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([team, count]) => ({ team, count }));
+    return counts;
   }, []);
 
-  /* Filtered champions */
-  const filteredChampions = useMemo(() => {
-    if (!filter.trim()) return IPL_CHAMPIONS;
-    const q = filter.trim().toLowerCase();
-    return IPL_CHAMPIONS.filter(
-      (c) =>
-        c.winner.toLowerCase().includes(q) ||
-        c.runnerUp.toLowerCase().includes(q) ||
-        c.year.toString().includes(q)
-    );
-  }, [filter]);
+  /* Filtered champions for detail view */
+  const teamChampions = useMemo(() => {
+    if (!selectedTeam) return [];
+    return IPL_CHAMPIONS.filter((c) => c.winner === selectedTeam);
+  }, [selectedTeam]);
 
   return (
     <>
@@ -198,50 +266,65 @@ export default function TrophyRoom() {
         <h1 className="tr-heading">Trophy Room</h1>
         <p className="tr-subtitle">Every IPL champion from 2008 to 2024</p>
 
-        {/* Trophy count summary */}
-        <div className="tr-summary">
-          {trophyCounts.map(({ team, count }) => (
-            <div className="tr-summary-item" key={team}>
-              <img className="tr-summary-logo" src={getTeamLogo(team)} alt="" />
-              <span className="tr-summary-name">{team}</span>
-              <span className="tr-summary-count">{count}</span>
+        {selectedTeam === null ? (
+          /* ═══ Layout 1: Team Grid ═══ */
+          <div className="tr-team-grid">
+            {ALL_TEAMS.map((team) => {
+              const count = trophyCounts[team] || 0;
+              const hasWon = count > 0;
+              return (
+                <div
+                  key={team}
+                  className={`tr-team-card ${hasWon ? "tr-team-card--clickable" : "tr-team-card--dimmed"}`}
+                  onClick={() => hasWon && setSelectedTeam(team)}
+                >
+                  <img className="tr-team-logo" src={getTeamLogo(team)} alt={team} />
+                  <div className="tr-team-name">{team}</div>
+                  <div className={`tr-team-trophies ${hasWon ? "tr-team-trophies--has" : "tr-team-trophies--none"}`}>
+                    {hasWon ? `🏆 ${count} ${count === 1 ? "Trophy" : "Trophies"}` : "0 Trophies"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* ═══ Layout 2: Detail View ═══ */
+          <>
+            <button className="tr-back-btn" onClick={() => setSelectedTeam(null)}>
+              ← Back to All Teams
+            </button>
+
+            <div className="tr-detail-header">
+              <img className="tr-detail-logo" src={getTeamLogo(selectedTeam)} alt={selectedTeam} />
+              <div className="tr-detail-name">{selectedTeam}</div>
             </div>
-          ))}
-        </div>
+            <p className="tr-detail-count">
+              🏆 {teamChampions.length} {teamChampions.length === 1 ? "Title" : "Titles"} Won
+            </p>
 
-        {/* Filter */}
-        <div className="tr-filter-row">
-          <input
-            className="tr-filter-input"
-            type="text"
-            placeholder='Filter by team or year (e.g. "MI", "CSK", "2023")'
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </div>
-
-        {/* Cards grid */}
-        <div className="tr-grid">
-          {filteredChampions.length === 0 ? (
-            <div className="tr-no-results">No trophies match your search.</div>
-          ) : (
-            filteredChampions.map((c) => (
-              <div className="tr-card" key={c.year}>
-                <div className="tr-year-badge">🏆 {c.year}</div>
-                <img className="tr-logo" src={getTeamLogo(c.winner)} alt={c.winner} />
-                <div className="tr-winner-name">{c.winner}</div>
-                <div className="tr-detail">
-                  <span className="tr-detail-label">Venue: </span>
-                  {c.venue}
-                </div>
-                <div className="tr-runner-row">
-                  <img className="tr-runner-logo" src={getTeamLogo(c.runnerUp)} alt="" />
-                  <span className="tr-runner-text">Runner-up: {c.runnerUp}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+            <div className="tr-grid">
+              {teamChampions.length === 0 ? (
+                <div className="tr-no-results">No trophies found for this team.</div>
+              ) : (
+                teamChampions.map((c) => (
+                  <div className="tr-card" key={c.year}>
+                    <div className="tr-year-badge">🏆 {c.year}</div>
+                    <img className="tr-logo" src={getTeamLogo(c.winner)} alt={c.winner} />
+                    <div className="tr-winner-name">{c.winner}</div>
+                    <div className="tr-detail">
+                      <span className="tr-detail-label">Venue: </span>
+                      {c.venue}
+                    </div>
+                    <div className="tr-runner-row">
+                      <img className="tr-runner-logo" src={getTeamLogo(c.runnerUp)} alt="" />
+                      <span className="tr-runner-text">Runner-up: {c.runnerUp}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
     </>
   );
