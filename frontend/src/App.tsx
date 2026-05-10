@@ -1,10 +1,11 @@
-import { NavLink, Routes, Route } from "react-router-dom";
+import { NavLink, Routes, Route, useLocation } from "react-router-dom";
 import OverviewDashboard from "./components/OverviewDashboard";
 import "./App.css";
 import TeamAnalysis from "./components/TeamAnalysis";
 import PlayerAnalysis from "./components/PlayerAnalysis";
 import Predictions from "./components/Predictions";
 import TrophyRoom from "./components/TrophyRoom";
+import LandingPage from "./components/LandingPage";
 
 // /* ── Inline placeholder pages ───────────────────────────────────────────── */
 // function TeamsPlaceholder() {
@@ -39,7 +40,7 @@ import TrophyRoom from "./components/TrophyRoom";
 
 /* ── Nav items ──────────────────────────────────────────────────────────── */
 const navItems = [
-  { to: "/", label: "Overview", icon: "📊" },
+  { to: "/overview", label: "Overview", icon: "📊" },
   { to: "/teams", label: "Teams", icon: "🏟️" },
   { to: "/players", label: "Players", icon: "🏏" },
   { to: "/predict", label: "Predictions", icon: "🤖" },
@@ -48,6 +49,18 @@ const navItems = [
 
 /* ── App shell ──────────────────────────────────────────────────────────── */
 export default function App() {
+  const location = useLocation();
+  const isLanding = location.pathname === "/";
+
+  /* If on the landing page, render it full-screen without the sidebar */
+  if (isLanding) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+      </Routes>
+    );
+  }
+
   return (
     <div className="app-layout">
       {/* Sidebar */}
@@ -62,7 +75,7 @@ export default function App() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/"}
+              end={item.to === "/overview"}
               className={({ isActive }) =>
                 `nav-link ${isActive ? "nav-link--active" : ""}`
               }
@@ -81,7 +94,7 @@ export default function App() {
       {/* Main content */}
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<OverviewDashboard />} />
+          <Route path="/overview" element={<OverviewDashboard />} />
           <Route path="/teams" element={<TeamAnalysis />} />
           <Route path="/players" element={<PlayerAnalysis/>} />
           <Route path="/predict" element={<Predictions />} />

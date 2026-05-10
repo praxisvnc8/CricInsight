@@ -1,0 +1,384 @@
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  CricInsight — Cinematic Landing Page                                    ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+/* ── Container ──────────────────────────────────────────────────────────── */
+.landing {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #060818 0%, #0a0f2e 30%, #0d1338 60%, #0b0e28 100%);
+}
+
+/* ── Perspective grid ───────────────────────────────────────────────────── */
+.landing__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(99, 140, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 140, 255, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+  animation: gridPulse 8s ease-in-out infinite;
+}
+
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* ── Glowing orbs ───────────────────────────────────────────────────────── */
+.landing__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.35;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.landing__orb--1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, #0066ff 0%, transparent 70%);
+  top: -15%;
+  right: -5%;
+  animation: orbFloat1 12s ease-in-out infinite;
+}
+
+.landing__orb--2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+  bottom: -10%;
+  left: -8%;
+  animation: orbFloat2 14s ease-in-out infinite;
+}
+
+.landing__orb--3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #f59e0b 0%, transparent 70%);
+  top: 50%;
+  left: 55%;
+  opacity: 0.15;
+  animation: orbFloat3 10s ease-in-out infinite;
+}
+
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(-40px, 30px) scale(1.08); }
+  66%      { transform: translate(25px, -20px) scale(0.95); }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(50px, -35px) scale(1.1); }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-30px, 20px) scale(1.15); }
+}
+
+/* ── Vignette overlay ───────────────────────────────────────────────────── */
+.landing__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(6, 8, 24, 0.75) 100%);
+  pointer-events: none;
+}
+
+/* ── Floating particles ─────────────────────────────────────────────────── */
+.landing__particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.landing__particle {
+  position: absolute;
+  bottom: -4px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(99, 180, 255, 0.5);
+  animation: particleRise linear infinite;
+}
+
+.landing__particle:nth-child(odd) {
+  background: rgba(167, 139, 250, 0.45);
+}
+
+@keyframes particleRise {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+}
+
+/* ── Content wrapper ────────────────────────────────────────────────────── */
+.landing__content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  max-width: 960px;
+  animation: contentFadeIn 1s ease-out;
+}
+
+@keyframes contentFadeIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Badge ──────────────────────────────────────────────────────────────── */
+.landing__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  margin-bottom: 2rem;
+  animation: badgePulse 3s ease-in-out infinite;
+}
+
+.landing__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 8px #3b82f6;
+  animation: dotBlink 2s ease-in-out infinite;
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  50%      { box-shadow: 0 0 20px 2px rgba(59, 130, 246, 0.12); }
+}
+
+/* ── Headline ───────────────────────────────────────────────────────────── */
+.landing__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.landing__headline-line {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.landing__headline-accent {
+  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 40%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Subheadline ────────────────────────────────────────────────────────── */
+.landing__subheadline {
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  color: #94a3b8;
+  font-weight: 400;
+  max-width: 540px;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+/* ── CTA button ─────────────────────────────────────────────────────────── */
+.landing__cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow:
+    0 0 30px rgba(37, 99, 235, 0.35),
+    0 0 60px rgba(124, 58, 237, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  margin-bottom: 3.5rem;
+}
+
+.landing__cta:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow:
+    0 0 40px rgba(37, 99, 235, 0.5),
+    0 0 80px rgba(124, 58, 237, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.landing__cta:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.landing__cta-text {
+  position: relative;
+  z-index: 2;
+}
+
+.landing__cta-arrow {
+  position: relative;
+  z-index: 2;
+  font-size: 1.2rem;
+  transition: transform 0.25s ease;
+}
+
+.landing__cta:hover .landing__cta-arrow {
+  transform: translateX(4px);
+}
+
+/* Sweeping glow on the CTA */
+.landing__cta-glow {
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: ctaSweep 3.5s ease-in-out infinite;
+}
+
+@keyframes ctaSweep {
+  0%   { left: -75%; }
+  40%  { left: 150%; }
+  100% { left: 150%; }
+}
+
+/* ── Feature cards ──────────────────────────────────────────────────────── */
+.landing__features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  margin-bottom: 3rem;
+}
+
+.landing__card {
+  position: relative;
+  padding: 2rem 1.5rem 1.75rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  text-align: center;
+  overflow: hidden;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.landing__card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(99, 140, 255, 0.2);
+  box-shadow: 0 8px 40px rgba(99, 140, 255, 0.08);
+}
+
+.landing__card-icon {
+  font-size: 2.2rem;
+  margin-bottom: 0.85rem;
+}
+
+.landing__card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.landing__card-desc {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+/* Shine effect on card hover */
+.landing__card-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.landing__card:hover .landing__card-shine {
+  opacity: 1;
+}
+
+/* ── Footer note ────────────────────────────────────────────────────────── */
+.landing__footer-note {
+  font-size: 0.72rem;
+  color: #475569;
+  letter-spacing: 0.3px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .landing__features {
+    grid-template-columns: 1fr;
+    max-width: 380px;
+  }
+
+  .landing__cta {
+    padding: 0.9rem 2rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing__content {
+    padding: 2rem 1rem;
+  }
+
+  .landing__badge {
+    font-size: 0.7rem;
+  }
+}
