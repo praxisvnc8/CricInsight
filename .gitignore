@@ -36,3 +36,5 @@ Thumbs.db
 # --- Notebooks ---
 # This ignores the hidden checkpoints Jupyter creates
 .ipynb_checkpoints/
+node_modules/
+Project_Synopsis_V2.md
